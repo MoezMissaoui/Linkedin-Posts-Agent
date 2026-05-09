@@ -4,7 +4,13 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { AgentForm } from "../_components/agent-form";
-import { deleteAgent, updateAgent, type AgentFormState } from "../actions";
+import { ScheduleForm } from "../_components/schedule-form";
+import {
+  deleteAgent,
+  updateAgent,
+  upsertSchedule,
+  type AgentFormState,
+} from "../actions";
 
 export default async function EditAgentPage({
   params,
@@ -19,11 +25,16 @@ export default async function EditAgentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: agent, error } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: agent, error }, { data: scheduleConfig }] = await Promise.all([
+    supabase.from("agents").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("agent_schedule_config")
+      .select("custom_cron, timezone")
+      .eq("agent_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (error || !agent) notFound();
 
@@ -39,6 +50,14 @@ export default async function EditAgentPage({
   const boundDelete = async () => {
     "use server";
     await deleteAgent(id);
+  };
+
+  const boundSchedule = async (
+    state: AgentFormState | undefined,
+    formData: FormData,
+  ): Promise<AgentFormState> => {
+    "use server";
+    return upsertSchedule(id, state, formData);
   };
 
   return (
@@ -65,6 +84,13 @@ export default async function EditAgentPage({
         action={boundUpdate}
         initial={agent}
         onDelete={boundDelete}
+      />
+
+      <ScheduleForm
+        enabled={Boolean(agent.schedule)}
+        initialCron={scheduleConfig?.custom_cron ?? ""}
+        initialTimezone={scheduleConfig?.timezone ?? "UTC"}
+        action={boundSchedule}
       />
     </div>
   );

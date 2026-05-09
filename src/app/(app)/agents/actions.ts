@@ -212,6 +212,87 @@ export async function updateAgent(
   return { ok: true, message: "Agent mis à jour." };
 }
 
+// ---------------------------------------------------------------------------
+// Schedule configuration (agent_schedule_config)
+// ---------------------------------------------------------------------------
+
+const CRON_RE = /^[\d*\/,\-]+(\s+[\d*\/,\-]+){4}$/;
+
+function isValidTimezone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function upsertSchedule(
+  agentId: string,
+  _prev: AgentFormState | undefined,
+  formData: FormData,
+): Promise<AgentFormState> {
+  if (!agentId) return { ok: false, message: "ID d'agent manquant." };
+
+  const cron = String(formData.get("custom_cron") ?? "").trim();
+  const timezone = String(formData.get("timezone") ?? "").trim();
+
+  if (!cron) {
+    return {
+      ok: false,
+      message: "Expression cron requise.",
+      fieldErrors: { custom_cron: "Champ requis." },
+    };
+  }
+  if (!CRON_RE.test(cron)) {
+    return {
+      ok: false,
+      message: "Format cron invalide (5 champs attendus).",
+      fieldErrors: {
+        custom_cron: "Format attendu : minute heure jour mois jour-semaine",
+      },
+    };
+  }
+  if (!timezone || !isValidTimezone(timezone)) {
+    return {
+      ok: false,
+      message: "Timezone invalide.",
+      fieldErrors: { timezone: "Timezone IANA invalide." },
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Session expirée. Reconnecte-toi." };
+  }
+
+  // Find existing config for this agent (RLS scopes by ownership).
+  const { data: existing } = await supabase
+    .from("agent_schedule_config")
+    .select("id")
+    .eq("agent_id", agentId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("agent_schedule_config")
+      .update({ custom_cron: cron, timezone })
+      .eq("id", existing.id);
+    if (error) return { ok: false, message: error.message };
+  } else {
+    const { error } = await supabase
+      .from("agent_schedule_config")
+      .insert({ agent_id: agentId, custom_cron: cron, timezone });
+    if (error) return { ok: false, message: error.message };
+  }
+
+  revalidatePath(`/agents/${agentId}`);
+  return { ok: true, message: "Planning enregistré." };
+}
+
 export async function deleteAgent(id: string): Promise<void> {
   if (!id) return;
 

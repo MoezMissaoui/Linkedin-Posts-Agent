@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bot, ExternalLink, ImageOff, Inbox } from "lucide-react";
+import { Bot, ImageOff, Inbox } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 
@@ -154,74 +153,64 @@ function PostCard({ post }: { post: PostRow }) {
   const excerpt = text.length > 240 ? `${text.slice(0, 240)}…` : text;
 
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <div className="relative aspect-[16/10] w-full bg-muted">
-        {post.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.image_url}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/60">
-            <ImageOff className="size-8" />
-          </div>
-        )}
-        <span
-          className={cn(
-            "absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium backdrop-blur-md",
-            post.is_published
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-              : "border-amber-500/40 bg-amber-500/15 text-amber-200",
+    <Link
+      href={`/posts/${post.id}`}
+      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-xl"
+    >
+      <Card className="flex h-full flex-col overflow-hidden transition-colors group-hover:border-foreground/30">
+        <div className="relative aspect-[16/10] w-full bg-muted">
+          {post.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={post.image_url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground/60">
+              <ImageOff className="size-8" />
+            </div>
           )}
-        >
           <span
             className={cn(
-              "size-1.5 rounded-full",
-              post.is_published ? "bg-emerald-400" : "bg-amber-400",
-            )}
-          />
-          {post.is_published ? "Publié" : "Brouillon"}
-        </span>
-      </div>
-
-      <CardContent className="flex flex-1 flex-col gap-3 p-5">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-secondary-foreground">
-            <Bot className="size-3" />
-            {agentTitle}
-          </span>
-          <span aria-hidden>·</span>
-          <time dateTime={post.created_at} title={post.created_at}>
-            {relativeTime(post.created_at)}
-          </time>
-        </div>
-
-        <p className="text-sm leading-relaxed text-foreground/90 line-clamp-5">
-          {excerpt || (
-            <span className="italic text-muted-foreground">Sans texte.</span>
-          )}
-        </p>
-
-        {post.post_link ? (
-          <a
-            href={post.post_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "mt-auto self-start",
+              "absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium backdrop-blur-md",
+              post.is_published
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                : "border-amber-500/40 bg-amber-500/15 text-amber-200",
             )}
           >
-            <ExternalLink className="size-3.5" />
-            Voir sur LinkedIn
-          </a>
-        ) : null}
-      </CardContent>
-    </Card>
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                post.is_published ? "bg-emerald-400" : "bg-amber-400",
+              )}
+            />
+            {post.is_published ? "Publié" : "Brouillon"}
+          </span>
+        </div>
+
+        <CardContent className="flex flex-1 flex-col gap-3 p-5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-secondary-foreground">
+              <Bot className="size-3" />
+              {agentTitle}
+            </span>
+            <span aria-hidden>·</span>
+            <time dateTime={post.created_at} title={post.created_at}>
+              {relativeTime(post.created_at)}
+            </time>
+          </div>
+
+          <p className="text-sm leading-relaxed text-foreground/90 line-clamp-5">
+            {excerpt || (
+              <span className="italic text-muted-foreground">Sans texte.</span>
+            )}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
