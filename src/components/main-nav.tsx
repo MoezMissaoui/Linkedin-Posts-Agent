@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Newspaper } from "lucide-react";
+import { Bot, LayoutDashboard, Newspaper } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/agents", label: "Agents", icon: Bot },
   { href: "/posts", label: "Posts", icon: Newspaper },
 ] as const;
 

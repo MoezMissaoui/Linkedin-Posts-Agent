@@ -1,4 +1,4 @@
-export type ChannelType = "telegram" | "email" | "linkedin";
+export type ChannelType = "telegram" | "email";
 
 export type Database = {
   public: {
