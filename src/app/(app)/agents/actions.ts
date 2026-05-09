@@ -361,6 +361,28 @@ export async function deleteScheduleConfig(
   revalidatePath("/dashboard");
 }
 
+export async function disconnectLinkedin(agentId: string): Promise<void> {
+  if (!agentId) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const { error } = await supabase
+    .from("agents")
+    .update({
+      linkedin_access_token: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", agentId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/agents");
+}
+
 export async function deleteAgent(id: string): Promise<void> {
   if (!id) return;
 

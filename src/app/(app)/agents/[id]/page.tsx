@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { AgentForm } from "../_components/agent-form";
+import { LinkedinCard } from "../_components/linkedin-card";
 import {
   ScheduleSection,
   type ScheduleConfigRow,
@@ -12,6 +13,7 @@ import {
   addScheduleConfig,
   deleteAgent,
   deleteScheduleConfig,
+  disconnectLinkedin,
   updateAgent,
   updateScheduleConfig,
   type AgentFormState,
@@ -84,6 +86,11 @@ export default async function EditAgentPage({
     await deleteScheduleConfig(configId, id);
   };
 
+  const boundDisconnectLinkedin = async () => {
+    "use server";
+    await disconnectLinkedin(id);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -108,6 +115,12 @@ export default async function EditAgentPage({
         action={boundUpdate}
         initial={agent}
         onDelete={boundDelete}
+      />
+
+      <LinkedinCard
+        agentId={id}
+        connected={Boolean(agent.linkedin_access_token)}
+        onDisconnect={boundDisconnectLinkedin}
       />
 
       <ScheduleSection

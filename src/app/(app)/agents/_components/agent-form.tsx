@@ -54,7 +54,6 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
     }
   }, [state]);
 
-  const linkedinPresent = Boolean(initial?.linkedin_access_token);
   const telegramTokenPresent = Boolean(initial?.telegram_bot_token);
 
   return (
@@ -178,25 +177,6 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
               placeholder="vous@exemple.com"
             />
           </Field>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- LinkedIn ---------------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>LinkedIn</CardTitle>
-          <CardDescription>
-            Token d&apos;accès pour publier sur ton compte
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SecretField
-            id="linkedin_access_token"
-            label="Access token LinkedIn"
-            mode={mode}
-            present={linkedinPresent}
-            clearName="linkedin_clear"
-          />
         </CardContent>
       </Card>
 
