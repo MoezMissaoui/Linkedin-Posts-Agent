@@ -3,8 +3,17 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarClock, Clock, Globe, Loader2, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Clock,
+  Globe,
+  Loader2,
+  PowerOff,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,27 +53,32 @@ const COMMON_TZ = [
 ];
 
 type Props = {
-  enabled: boolean;
+  hasConfig: boolean;
   initialCron: string;
   initialTimezone: string;
   action: (
     state: AgentFormState | undefined,
     formData: FormData,
   ) => Promise<AgentFormState>;
+  onDelete: () => Promise<void>;
 };
 
 const initialState: AgentFormState = { ok: false };
 
 export function ScheduleForm({
-  enabled,
+  hasConfig,
   initialCron,
   initialTimezone,
   action,
+  onDelete,
 }: Props) {
+  const router = useRouter();
   const [state, formAction] = useActionState(action, initialState);
   const [cron, setCron] = React.useState(initialCron);
   const [timezone, setTimezone] = React.useState(initialTimezone || "UTC");
   const [allTimezones, setAllTimezones] = React.useState<string[]>(COMMON_TZ);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deletePending, startDelete] = React.useTransition();
 
   React.useEffect(() => {
     if (state?.message) {
@@ -102,14 +116,26 @@ export function ScheduleForm({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        {!enabled ? (
-          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-            Le toggle <strong>« Planifier automatiquement »</strong> est
-            désactivé sur cet agent. Tu peux configurer le planning ici, mais il
-            ne sera utilisé qu&apos;une fois le toggle activé dans la section
-            Publication.
-          </p>
-        ) : null}
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+            hasConfig
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : "border-border bg-muted/40 text-muted-foreground",
+          )}
+        >
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              hasConfig ? "bg-emerald-500" : "bg-muted-foreground/60",
+            )}
+          />
+          <span>
+            {hasConfig
+              ? "La planification est active. L'agent générera selon le cron ci-dessous."
+              : "Aucun planning. Configure un cron + une timezone pour activer la planification."}
+          </span>
+        </div>
 
         <form action={formAction} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -200,19 +226,75 @@ export function ScheduleForm({
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
             <p className="text-xs text-muted-foreground">
               {cron ? humanize(cron, timezone) : null}
             </p>
-            <SubmitButton />
+            <SubmitButton hasConfig={hasConfig} />
           </div>
         </form>
+
+        {hasConfig ? (
+          <div className="border-t border-border/60 pt-4">
+            {confirmDelete ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertTriangle className="size-4" />
+                <span>Désactiver le planning et effacer le cron ?</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={deletePending}
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={deletePending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() =>
+                    startDelete(async () => {
+                      try {
+                        await onDelete();
+                        toast.success("Planning désactivé.");
+                        setConfirmDelete(false);
+                        router.refresh();
+                      } catch (e) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Erreur inattendue.",
+                        );
+                      }
+                    })
+                  }
+                >
+                  {deletePending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : null}
+                  Oui, désactiver
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <PowerOff className="size-3.5" />
+                Désactiver le planning
+              </Button>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ hasConfig }: { hasConfig: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
@@ -221,7 +303,7 @@ function SubmitButton() {
       ) : (
         <Save className="size-4" />
       )}
-      Enregistrer le planning
+      {hasConfig ? "Mettre à jour" : "Activer la planification"}
     </Button>
   );
 }

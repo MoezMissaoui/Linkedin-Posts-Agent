@@ -111,7 +111,7 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
         <CardHeader>
           <CardTitle>Publication</CardTitle>
           <CardDescription>
-            Comportement de génération et de planification
+            Comportement de génération
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -121,13 +121,6 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
             label="Générer une image avec chaque post"
             hint="Si activé, l'agent crée un visuel à partir du raw_code"
             defaultChecked={initial?.enable_post_picture ?? false}
-          />
-          <ToggleRow
-            id="schedule"
-            name="schedule"
-            label="Planifier automatiquement"
-            hint="Le cron / timezone se configure dans la table agent_schedule_config"
-            defaultChecked={initial?.schedule ?? false}
           />
         </CardContent>
       </Card>

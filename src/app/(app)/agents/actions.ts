@@ -30,7 +30,6 @@ type ParsedFields = {
   approval_channel: ChannelType | null;
   confirmation_channel: ChannelType | null;
   enable_post_picture: boolean;
-  schedule: boolean;
   // Secrets (handled separately)
   linkedin_access_token: string;
   linkedin_clear: boolean;
@@ -73,7 +72,6 @@ function parse(formData: FormData): ParsedFields {
     approval_channel: pickChannel(formData, "approval_channel"),
     confirmation_channel: pickChannel(formData, "confirmation_channel"),
     enable_post_picture: pickBool(formData, "enable_post_picture"),
-    schedule: pickBool(formData, "schedule"),
     linkedin_access_token: String(
       formData.get("linkedin_access_token") ?? "",
     ).trim().slice(0, TOKEN_MAX),
@@ -111,7 +109,6 @@ function basePayload(fields: ParsedFields) {
     approval_channel: fields.approval_channel,
     confirmation_channel: fields.confirmation_channel,
     enable_post_picture: fields.enable_post_picture,
-    schedule: fields.schedule,
   };
 }
 
@@ -285,8 +282,43 @@ export async function upsertSchedule(
     if (error) return { ok: false, message: error.message };
   }
 
+  // Keep agents.schedule in sync: a config exists -> schedule is on.
+  await supabase
+    .from("agents")
+    .update({ schedule: true, updated_at: new Date().toISOString() })
+    .eq("id", agentId);
+
   revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/agents");
+  revalidatePath("/dashboard");
   return { ok: true, message: "Planning enregistré." };
+}
+
+export async function deleteSchedule(agentId: string): Promise<void> {
+  if (!agentId) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const { error: delError } = await supabase
+    .from("agent_schedule_config")
+    .delete()
+    .eq("agent_id", agentId);
+  if (delError) throw new Error(delError.message);
+
+  // No config left -> schedule is off.
+  const { error: updError } = await supabase
+    .from("agents")
+    .update({ schedule: false, updated_at: new Date().toISOString() })
+    .eq("id", agentId);
+  if (updError) throw new Error(updError.message);
+
+  revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/agents");
+  revalidatePath("/dashboard");
 }
 
 export async function deleteAgent(id: string): Promise<void> {

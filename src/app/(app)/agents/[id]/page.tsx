@@ -7,6 +7,7 @@ import { AgentForm } from "../_components/agent-form";
 import { ScheduleForm } from "../_components/schedule-form";
 import {
   deleteAgent,
+  deleteSchedule,
   updateAgent,
   upsertSchedule,
   type AgentFormState,
@@ -60,6 +61,11 @@ export default async function EditAgentPage({
     return upsertSchedule(id, state, formData);
   };
 
+  const boundDeleteSchedule = async () => {
+    "use server";
+    await deleteSchedule(id);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -87,10 +93,11 @@ export default async function EditAgentPage({
       />
 
       <ScheduleForm
-        enabled={Boolean(agent.schedule)}
+        hasConfig={Boolean(scheduleConfig)}
         initialCron={scheduleConfig?.custom_cron ?? ""}
         initialTimezone={scheduleConfig?.timezone ?? "UTC"}
         action={boundSchedule}
+        onDelete={boundDeleteSchedule}
       />
     </div>
   );
