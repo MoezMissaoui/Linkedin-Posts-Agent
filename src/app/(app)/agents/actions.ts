@@ -220,13 +220,13 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-export async function upsertSchedule(
-  agentId: string,
-  _prev: AgentFormState | undefined,
-  formData: FormData,
-): Promise<AgentFormState> {
-  if (!agentId) return { ok: false, message: "ID d'agent manquant." };
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+function validateScheduleInput(formData: FormData): {
+  ok: true;
+  cron: string;
+  timezone: string;
+} | AgentFormState {
   const cron = String(formData.get("custom_cron") ?? "").trim();
   const timezone = String(formData.get("timezone") ?? "").trim();
 
@@ -253,49 +253,94 @@ export async function upsertSchedule(
       fieldErrors: { timezone: "Timezone IANA invalide." },
     };
   }
+  return { ok: true, cron, timezone };
+}
+
+// Recompute agents.schedule from the actual count of configs.
+async function syncAgentSchedule(
+  supabase: SupabaseServerClient,
+  agentId: string,
+) {
+  const { count } = await supabase
+    .from("agent_schedule_config")
+    .select("*", { count: "exact", head: true })
+    .eq("agent_id", agentId);
+
+  await supabase
+    .from("agents")
+    .update({
+      schedule: (count ?? 0) > 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", agentId);
+}
+
+export async function addScheduleConfig(
+  agentId: string,
+  _prev: AgentFormState | undefined,
+  formData: FormData,
+): Promise<AgentFormState> {
+  if (!agentId) return { ok: false, message: "ID d'agent manquant." };
+
+  const v = validateScheduleInput(formData);
+  if ("cron" in v === false) return v as AgentFormState;
+  const { cron, timezone } = v as { cron: string; timezone: string };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return { ok: false, message: "Session expirée. Reconnecte-toi." };
-  }
+  if (!user) return { ok: false, message: "Session expirée." };
 
-  // Find existing config for this agent (RLS scopes by ownership).
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from("agent_schedule_config")
-    .select("id")
-    .eq("agent_id", agentId)
-    .maybeSingle();
+    .insert({ agent_id: agentId, custom_cron: cron, timezone });
+  if (error) return { ok: false, message: error.message };
 
-  if (existing) {
-    const { error } = await supabase
-      .from("agent_schedule_config")
-      .update({ custom_cron: cron, timezone })
-      .eq("id", existing.id);
-    if (error) return { ok: false, message: error.message };
-  } else {
-    const { error } = await supabase
-      .from("agent_schedule_config")
-      .insert({ agent_id: agentId, custom_cron: cron, timezone });
-    if (error) return { ok: false, message: error.message };
-  }
-
-  // Keep agents.schedule in sync: a config exists -> schedule is on.
-  await supabase
-    .from("agents")
-    .update({ schedule: true, updated_at: new Date().toISOString() })
-    .eq("id", agentId);
+  await syncAgentSchedule(supabase, agentId);
 
   revalidatePath(`/agents/${agentId}`);
   revalidatePath("/agents");
   revalidatePath("/dashboard");
-  return { ok: true, message: "Planning enregistré." };
+  return { ok: true, message: "Planning ajouté." };
 }
 
-export async function deleteSchedule(agentId: string): Promise<void> {
-  if (!agentId) return;
+export async function updateScheduleConfig(
+  configId: string,
+  agentId: string,
+  _prev: AgentFormState | undefined,
+  formData: FormData,
+): Promise<AgentFormState> {
+  if (!configId) return { ok: false, message: "ID de planning manquant." };
+
+  const v = validateScheduleInput(formData);
+  if ("cron" in v === false) return v as AgentFormState;
+  const { cron, timezone } = v as { cron: string; timezone: string };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Session expirée." };
+
+  const { error } = await supabase
+    .from("agent_schedule_config")
+    .update({ custom_cron: cron, timezone })
+    .eq("id", configId);
+  if (error) return { ok: false, message: error.message };
+
+  await syncAgentSchedule(supabase, agentId);
+
+  revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/agents");
+  return { ok: true, message: "Planning mis à jour." };
+}
+
+export async function deleteScheduleConfig(
+  configId: string,
+  agentId: string,
+): Promise<void> {
+  if (!configId) return;
 
   const supabase = await createClient();
   const {
@@ -303,18 +348,13 @@ export async function deleteSchedule(agentId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { error: delError } = await supabase
+  const { error } = await supabase
     .from("agent_schedule_config")
     .delete()
-    .eq("agent_id", agentId);
-  if (delError) throw new Error(delError.message);
+    .eq("id", configId);
+  if (error) throw new Error(error.message);
 
-  // No config left -> schedule is off.
-  const { error: updError } = await supabase
-    .from("agents")
-    .update({ schedule: false, updated_at: new Date().toISOString() })
-    .eq("id", agentId);
-  if (updError) throw new Error(updError.message);
+  await syncAgentSchedule(supabase, agentId);
 
   revalidatePath(`/agents/${agentId}`);
   revalidatePath("/agents");

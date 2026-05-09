@@ -4,12 +4,16 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { AgentForm } from "../_components/agent-form";
-import { ScheduleForm } from "../_components/schedule-form";
 import {
+  ScheduleSection,
+  type ScheduleConfigRow,
+} from "../_components/schedule-form";
+import {
+  addScheduleConfig,
   deleteAgent,
-  deleteSchedule,
+  deleteScheduleConfig,
   updateAgent,
-  upsertSchedule,
+  updateScheduleConfig,
   type AgentFormState,
 } from "../actions";
 
@@ -26,20 +30,24 @@ export default async function EditAgentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: agent, error }, { data: scheduleConfig }] = await Promise.all([
+  const [{ data: agent, error }, { data: configsData }] = await Promise.all([
     supabase.from("agents").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("agent_schedule_config")
-      .select("custom_cron, timezone")
+      .select("id, custom_cron, timezone, created_at")
       .eq("agent_id", id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .order("created_at", { ascending: true }),
   ]);
 
   if (error || !agent) notFound();
 
-  // Bind id into the server actions so the form/delete button can call them directly.
+  const configs: ScheduleConfigRow[] = (configsData ?? []).map((c) => ({
+    id: c.id,
+    custom_cron: c.custom_cron,
+    timezone: c.timezone,
+  }));
+
+  // Bind id into the agent CRUD server actions.
   const boundUpdate = async (
     state: AgentFormState | undefined,
     formData: FormData,
@@ -53,17 +61,27 @@ export default async function EditAgentPage({
     await deleteAgent(id);
   };
 
-  const boundSchedule = async (
+  // Schedule actions: bind agentId so the client only needs to deal with config-level args.
+  const boundAddSchedule = async (
     state: AgentFormState | undefined,
     formData: FormData,
   ): Promise<AgentFormState> => {
     "use server";
-    return upsertSchedule(id, state, formData);
+    return addScheduleConfig(id, state, formData);
   };
 
-  const boundDeleteSchedule = async () => {
+  const boundUpdateSchedule = async (
+    configId: string,
+    state: AgentFormState | undefined,
+    formData: FormData,
+  ): Promise<AgentFormState> => {
     "use server";
-    await deleteSchedule(id);
+    return updateScheduleConfig(configId, id, state, formData);
+  };
+
+  const boundDeleteSchedule = async (configId: string) => {
+    "use server";
+    await deleteScheduleConfig(configId, id);
   };
 
   return (
@@ -92,12 +110,12 @@ export default async function EditAgentPage({
         onDelete={boundDelete}
       />
 
-      <ScheduleForm
-        hasConfig={Boolean(scheduleConfig)}
-        initialCron={scheduleConfig?.custom_cron ?? ""}
-        initialTimezone={scheduleConfig?.timezone ?? "UTC"}
-        action={boundSchedule}
-        onDelete={boundDeleteSchedule}
+      <ScheduleSection
+        agentId={id}
+        configs={configs}
+        addAction={boundAddSchedule}
+        updateAction={boundUpdateSchedule}
+        deleteAction={boundDeleteSchedule}
       />
     </div>
   );
