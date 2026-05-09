@@ -30,9 +30,9 @@ export async function updateProfile(
   _prev: FormState | undefined,
   formData: FormData,
 ): Promise<FormState> {
-  const fullName = String(formData.get("full_name") ?? "").trim();
+  const displayName = String(formData.get("display_name") ?? "").trim();
 
-  if (fullName.length > MAX_NAME) {
+  if (displayName.length > MAX_NAME) {
     return {
       ok: false,
       message: `Le nom doit faire au maximum ${MAX_NAME} caractères.`,
@@ -47,8 +47,13 @@ export async function updateProfile(
     return { ok: false, message: "Session expirée. Reconnecte-toi." };
   }
 
+  const value = displayName || null;
   const { error } = await supabase.auth.updateUser({
-    data: { full_name: fullName || null },
+    data: {
+      display_name: value,
+      full_name: value,
+      name: value,
+    },
   });
 
   if (error) {

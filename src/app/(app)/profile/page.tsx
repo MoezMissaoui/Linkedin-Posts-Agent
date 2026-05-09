@@ -12,13 +12,16 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/auth/login");
 
-  const fullName =
-    typeof user.user_metadata?.full_name === "string"
-      ? user.user_metadata.full_name
-      : "";
+  const meta = user.user_metadata ?? {};
+  const displayName =
+    typeof meta.display_name === "string"
+      ? meta.display_name
+      : typeof meta.full_name === "string"
+        ? meta.full_name
+        : "";
 
   const initials =
-    (fullName || user.email || "?")
+    (displayName || user.email || "?")
       .split(/\s+|@/)
       .filter(Boolean)
       .slice(0, 2)
@@ -36,7 +39,7 @@ export default async function SettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {fullName || user.email}
+            {displayName || user.email}
           </h1>
           <p className="text-sm text-muted-foreground">
             Gère ton profil et la sécurité de ton compte
@@ -47,7 +50,7 @@ export default async function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileForm
           email={user.email ?? ""}
-          fullName={fullName}
+          displayName={displayName}
           emailConfirmed={Boolean(user.email_confirmed_at)}
         />
         <PasswordForm />

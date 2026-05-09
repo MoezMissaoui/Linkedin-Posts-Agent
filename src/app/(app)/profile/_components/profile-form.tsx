@@ -22,11 +22,11 @@ const initial: FormState = { ok: false };
 
 type Props = {
   email: string;
-  fullName: string;
+  displayName: string;
   emailConfirmed: boolean;
 };
 
-export function ProfileForm({ email, fullName, emailConfirmed }: Props) {
+export function ProfileForm({ email, displayName, emailConfirmed }: Props) {
   const [state, formAction] = useActionState(updateProfile, initial);
 
   useEffect(() => {
@@ -71,14 +71,14 @@ export function ProfileForm({ email, fullName, emailConfirmed }: Props) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="full_name">Nom complet</Label>
+            <Label htmlFor="display_name">Nom complet</Label>
             <div className="relative">
               <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                id="full_name"
-                name="full_name"
+                id="display_name"
+                name="display_name"
                 type="text"
-                defaultValue={fullName}
+                defaultValue={displayName}
                 placeholder="Comment veux-tu apparaître ?"
                 maxLength={80}
                 className="pl-9"

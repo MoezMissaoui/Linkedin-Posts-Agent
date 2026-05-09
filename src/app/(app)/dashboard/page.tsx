@@ -24,12 +24,19 @@ export default async function DashboardPage() {
     supabase.from("linkedin_posts").select("*", { count: "exact", head: true }),
   ]);
 
+  const meta = user.user_metadata ?? {};
+  const greetingName =
+    (typeof meta.display_name === "string" && meta.display_name) ||
+    (typeof meta.full_name === "string" && meta.full_name) ||
+    user.email?.split("@")[0] ||
+    "";
+
   return (
     <div className="flex flex-col gap-8">
       <section>
         <p className="text-sm text-muted-foreground">Bienvenue</p>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Hey, <span className="brand-text">{user.email?.split("@")[0]}</span> 👋
+          Hey, <span className="brand-text">{greetingName}</span> 👋
         </h1>
         <p className="mt-2 text-muted-foreground">
           Tes agents Postilys, leurs schedules et leurs posts LinkedIn — tout
