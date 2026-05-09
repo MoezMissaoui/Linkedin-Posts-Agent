@@ -9,6 +9,7 @@
 
 const AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
+const USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 
 export const SCOPES = ["openid", "profile", "email", "w_member_social"];
 
@@ -21,6 +22,16 @@ export type LinkedinTokenResponse = {
   scope: string;
   token_type: string;
   id_token?: string;
+};
+
+export type LinkedinUserInfo = {
+  sub: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  email?: string;
+  picture?: string;
+  locale?: string;
 };
 
 function required(name: string, value: string | undefined): string {
@@ -84,4 +95,25 @@ export async function exchangeCode(
   }
 
   return (await res.json()) as LinkedinTokenResponse;
+}
+
+export async function getUserInfo(
+  accessToken: string,
+): Promise<LinkedinUserInfo> {
+  const res = await fetch(USERINFO_URL, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `LinkedIn userinfo failed (${res.status}): ${text || "no body"}`,
+    );
+  }
+
+  return (await res.json()) as LinkedinUserInfo;
 }

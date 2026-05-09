@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   exchangeCode,
   getRedirectUri,
+  getUserInfo,
   STATE_COOKIE,
 } from "@/lib/linkedin";
 
@@ -62,10 +63,25 @@ export async function GET(req: NextRequest) {
 
   try {
     const tokens = await exchangeCode(code, getRedirectUri(origin));
+
+    // Fetch the LinkedIn member id (sub) so n8n can post without an extra call.
+    let memberId: string | null = null;
+    try {
+      const info = await getUserInfo(tokens.access_token);
+      memberId = info.sub ?? null;
+    } catch (e) {
+      // Token is valid but userinfo failed — still save the token, leave member_id null.
+      console.error(
+        "[linkedin callback] userinfo failed",
+        e instanceof Error ? e.message : e,
+      );
+    }
+
     const { error: dbError } = await supabase
       .from("agents")
       .update({
         linkedin_access_token: tokens.access_token,
+        linkedin_member_id: memberId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", agentId);

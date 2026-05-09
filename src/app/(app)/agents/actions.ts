@@ -374,6 +374,7 @@ export async function disconnectLinkedin(agentId: string): Promise<void> {
     .from("agents")
     .update({
       linkedin_access_token: null,
+      linkedin_member_id: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agentId);

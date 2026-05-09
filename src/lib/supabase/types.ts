@@ -15,6 +15,7 @@ export type Database = {
           telegram_bot_token: string | null;
           telegram_start_command: string | null;
           linkedin_access_token: string | null;
+          linkedin_member_id: string | null;
           approval_channel: ChannelType | null;
           confirmation_channel: ChannelType | null;
           enable_post_picture: boolean;
@@ -33,6 +34,7 @@ export type Database = {
           telegram_bot_token?: string | null;
           telegram_start_command?: string | null;
           linkedin_access_token?: string | null;
+          linkedin_member_id?: string | null;
           approval_channel?: ChannelType | null;
           confirmation_channel?: ChannelType | null;
           enable_post_picture?: boolean;
