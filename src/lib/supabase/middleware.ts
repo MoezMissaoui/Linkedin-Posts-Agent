@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 import type { Database } from "./types";
 
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = ["/dashboard", "/profile"];
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PREFIXES.some(

@@ -3,10 +3,10 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 
-export default function DashboardLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -19,6 +19,13 @@ export default function DashboardLayout({
             <Logo size="md" />
           </Link>
           <div className="flex items-center gap-2">
+            <Link
+              href="/profile"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              <User className="size-4" />
+              <span className="hidden sm:inline">Profil</span>
+            </Link>
             <ThemeToggle />
             <form action={signOut}>
               <Button type="submit" variant="ghost" size="sm">
