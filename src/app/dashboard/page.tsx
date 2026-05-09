@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bot, FileText, Sparkles } from "lucide-react";
+import { Bot, FileText } from "lucide-react";
 
 import {
   Card,
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2">
         <StatCard
           icon={<Bot className="size-5" />}
           label="Agents"
@@ -49,12 +49,6 @@ export default async function DashboardPage() {
           label="Posts LinkedIn"
           value={postsCount ?? 0}
           hint="Brouillons + publiés"
-        />
-        <StatCard
-          icon={<Sparkles className="size-5" />}
-          label="Prochaine étape"
-          value="CRUD Agents"
-          hint="À venir dans la prochaine itération"
         />
       </section>
     </div>

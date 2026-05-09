@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { DEFAULT_THEME, isTheme, THEME_COOKIE, type Theme } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,26 +23,25 @@ export const metadata: Metadata = {
     "Postilys lets you orchestrate AI agents that draft, schedule and publish LinkedIn posts on autopilot.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get(THEME_COOKIE)?.value;
+  const theme: Theme = isTheme(stored) ? stored : DEFAULT_THEME;
+
   return (
     <html
       lang="fr"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${theme === "dark" ? "dark " : ""}${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      style={{ colorScheme: theme }}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider initialTheme={theme}>
           {children}
-          <Toaster richColors closeButton position="top-right" />
+          <Toaster richColors closeButton position="top-right" theme={theme} />
         </ThemeProvider>
       </body>
     </html>
