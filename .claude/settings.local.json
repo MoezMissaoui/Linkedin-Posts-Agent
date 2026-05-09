@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr *)",
+      "PowerShell(gh pr list --head develop --state all --json number,url,state,title,baseRefName)",
+      "Bash(curl -s \"https://api.github.com/repos/MoezMissaoui/Linkedin-Posts-Agent/pulls?head=MoezMissaoui:develop&state=all\")",
+      "PowerShell(Get-Command gh -ErrorAction SilentlyContinue; if \\($null -eq \\(Get-Command gh -ErrorAction SilentlyContinue\\)\\) { @\\(\"$env:LOCALAPPDATA\\\\Programs\\\\GitHub CLI\\\\gh.exe\", \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\GitHub CLI\\\\gh.exe\"\\) | ForEach-Object { if \\(Test-Path $_\\) { Write-Output \"FOUND: $_\" } } })"
+    ]
+  }
+}
