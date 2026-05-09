@@ -4,6 +4,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 import type { Database } from "./types";
 
+const PROTECTED_PREFIXES = ["/dashboard"];
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -28,7 +36,35 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // Redirect unauthenticated users away from protected pages.
+  if (!user && isProtectedPath(pathname)) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Redirect authenticated users away from auth pages (except callback/reset-password).
+  if (
+    user &&
+    (pathname === "/auth/login" ||
+      pathname === "/auth/register" ||
+      pathname === "/auth/forgot-password")
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Root: route logged-in users to dashboard, others to login.
+  if (pathname === "/") {
+    return NextResponse.redirect(
+      new URL(user ? "/dashboard" : "/auth/login", request.url),
+    );
+  }
 
   return response;
 }
