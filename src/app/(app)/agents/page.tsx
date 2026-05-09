@@ -29,7 +29,7 @@ export default async function AgentsPage() {
   const { data: agents, error } = await supabase
     .from("agents")
     .select(
-      "id, title, post_subject, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at",
+      "id, title, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at",
     )
     .order("updated_at", { ascending: false, nullsFirst: false });
 
@@ -76,7 +76,6 @@ function AgentCard({
   agent: {
     id: string;
     title: string | null;
-    post_subject: string | null;
     schedule: boolean;
     enable_post_picture: boolean;
     approval_channel: string | null;
@@ -102,11 +101,6 @@ function AgentCard({
               <h3 className="truncate text-base font-semibold">
                 {agent.title || "Agent sans titre"}
               </h3>
-              <p className="truncate text-sm text-muted-foreground">
-                {agent.post_subject || (
-                  <span className="italic">Aucun sujet défini</span>
-                )}
-              </p>
             </div>
             <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </div>

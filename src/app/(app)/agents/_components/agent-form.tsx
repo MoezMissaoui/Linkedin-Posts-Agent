@@ -91,20 +91,6 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
           </Field>
 
           <Field
-            id="post_subject"
-            label="Sujet des posts"
-            hint="Le thème global que l'agent doit traiter"
-          >
-            <Input
-              id="post_subject"
-              name="post_subject"
-              defaultValue={initial?.post_subject ?? ""}
-              maxLength={200}
-              placeholder="Astuces avancées Laravel pour seniors"
-            />
-          </Field>
-
-          <Field
             id="prompt_system"
             label="Prompt système"
             hint="Instructions complètes pour le LLM (ton, contraintes, format de sortie…)"

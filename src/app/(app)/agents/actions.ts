@@ -15,7 +15,6 @@ export type AgentFormState = {
 const CHANNELS: ChannelType[] = ["telegram", "email"];
 
 const TITLE_MAX = 120;
-const SUBJECT_MAX = 200;
 const PROMPT_MAX = 8000;
 const TOKEN_MAX = 1000;
 const SHORT_MAX = 200;
@@ -24,7 +23,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ParsedFields = {
   title: string;
-  post_subject: string | null;
   prompt_system: string | null;
   email: string | null;
   telegram_chat_id: string | null;
@@ -64,7 +62,6 @@ function pickBool(formData: FormData, name: string) {
 function parse(formData: FormData): ParsedFields {
   return {
     title: String(formData.get("title") ?? "").trim().slice(0, TITLE_MAX),
-    post_subject: pickString(formData, "post_subject", SUBJECT_MAX),
     prompt_system: pickString(formData, "prompt_system", PROMPT_MAX),
     email: pickString(formData, "email", SHORT_MAX),
     telegram_chat_id: pickString(formData, "telegram_chat_id", SHORT_MAX),
@@ -107,7 +104,6 @@ function validate(fields: ParsedFields): AgentFormState | null {
 function basePayload(fields: ParsedFields) {
   return {
     title: fields.title,
-    post_subject: fields.post_subject,
     prompt_system: fields.prompt_system,
     email: fields.email,
     telegram_chat_id: fields.telegram_chat_id,

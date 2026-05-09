@@ -82,7 +82,7 @@ export default async function DashboardPage() {
     supabase
       .from("agents")
       .select(
-        "id, title, post_subject, schedule, enable_post_picture, updated_at, created_at",
+        "id, title, schedule, enable_post_picture, updated_at, created_at",
       )
       .order("updated_at", { ascending: false, nullsFirst: false })
       .limit(4),
@@ -311,7 +311,6 @@ function AgentRow({
   agent: {
     id: string;
     title: string | null;
-    post_subject: string | null;
     schedule: boolean;
     enable_post_picture: boolean;
     updated_at: string | null;
@@ -332,11 +331,6 @@ function AgentRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
           {agent.title || "Sans titre"}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {agent.post_subject || (
-            <span className="italic">Aucun sujet</span>
-          )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
