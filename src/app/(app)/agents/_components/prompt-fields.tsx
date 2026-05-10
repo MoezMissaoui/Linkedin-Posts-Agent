@@ -27,7 +27,7 @@ type Initial = {
 
 const DEFAULT_FOOTER = `➤ I share real-production tips. Let's grow together 🤝
 🔔 Follow me to see all my updates!
-💻 GitHub: https://github.com/your-handle
+💻 GitHub: https://github.com/example
 #yourhashtags`;
 
 export function PromptFields({ initial }: { initial?: Initial }) {
