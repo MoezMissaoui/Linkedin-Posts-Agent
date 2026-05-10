@@ -57,7 +57,7 @@ export function AppShell({
       {/* Desktop sidebar — sticky to viewport, collapsible */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-svh shrink-0 flex-col self-start border-r border-border/60 bg-background transition-[width] duration-200 ease-out md:flex",
+          "sticky top-0 hidden h-svh shrink-0 flex-col self-start border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex",
           collapsed ? "w-16" : "w-64",
         )}
       >
@@ -87,7 +87,7 @@ export function AppShell({
         {/* Panel */}
         <aside
           className={cn(
-            "absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-r border-border/60 bg-background shadow-xl transition-transform",
+            "absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground shadow-xl transition-transform",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
