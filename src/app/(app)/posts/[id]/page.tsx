@@ -19,7 +19,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { PostActions } from "../_components/post-actions";
-import { deletePost, republishPost } from "../actions";
+import { deletePost } from "../actions";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -66,11 +66,7 @@ export default async function PostDetailPage({
   if (error || !row) notFound();
   const post = row as unknown as PostDetail;
 
-  // Bound server actions for client-side action buttons.
-  const boundRepublish = async () => {
-    "use server";
-    await republishPost(id);
-  };
+  // Bound server action for client-side action button.
   const boundDelete = async () => {
     "use server";
     await deletePost(id);
@@ -126,7 +122,6 @@ export default async function PostDetailPage({
 
           <PostActions
             postLink={post.post_link}
-            onRepublish={boundRepublish}
             onDelete={boundDelete}
           />
         </div>
