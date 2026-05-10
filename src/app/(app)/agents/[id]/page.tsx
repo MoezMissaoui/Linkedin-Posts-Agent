@@ -4,19 +4,9 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { AgentForm } from "../_components/agent-form";
-import { LinkedinCard } from "../_components/linkedin-card";
 import {
-  ScheduleSection,
-  type ScheduleConfigRow,
-} from "../_components/schedule-form";
-import {
-  addScheduleConfig,
   deleteAgent,
-  deleteScheduleConfig,
-  disconnectLinkedin,
-  testLinkedinConnection,
   updateAgent,
-  updateScheduleConfig,
   type AgentFormState,
 } from "../actions";
 
@@ -33,22 +23,13 @@ export default async function EditAgentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: agent, error }, { data: configsData }] = await Promise.all([
-    supabase.from("agents").select("*").eq("id", id).maybeSingle(),
-    supabase
-      .from("agent_schedule_config")
-      .select("id, custom_cron, timezone, created_at")
-      .eq("agent_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const { data: agent, error } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error || !agent) notFound();
-
-  const configs: ScheduleConfigRow[] = (configsData ?? []).map((c) => ({
-    id: c.id,
-    custom_cron: c.custom_cron,
-    timezone: c.timezone,
-  }));
 
   // Bind id into the agent CRUD server actions.
   const boundUpdate = async (
@@ -63,47 +44,6 @@ export default async function EditAgentPage({
     "use server";
     await deleteAgent(id);
   };
-
-  // Schedule actions: bind agentId so the client only needs to deal with config-level args.
-  const boundAddSchedule = async (
-    state: AgentFormState | undefined,
-    formData: FormData,
-  ): Promise<AgentFormState> => {
-    "use server";
-    return addScheduleConfig(id, state, formData);
-  };
-
-  const boundUpdateSchedule = async (
-    configId: string,
-    state: AgentFormState | undefined,
-    formData: FormData,
-  ): Promise<AgentFormState> => {
-    "use server";
-    return updateScheduleConfig(configId, id, state, formData);
-  };
-
-  const boundDeleteSchedule = async (configId: string) => {
-    "use server";
-    await deleteScheduleConfig(configId, id);
-  };
-
-  const boundDisconnectLinkedin = async () => {
-    "use server";
-    await disconnectLinkedin(id);
-  };
-
-  const boundTestLinkedin = async () => {
-    "use server";
-    return testLinkedinConnection(id);
-  };
-
-  const linkedinMember = agent.linkedin_access_token
-    ? {
-        name: agent.linkedin_member_name ?? null,
-        picture: agent.linkedin_member_picture ?? null,
-        connectedAt: agent.linkedin_connected_at ?? null,
-      }
-    : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,7 +60,8 @@ export default async function EditAgentPage({
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Édite la configuration. Les tokens vides en édition ne sont pas
-          écrasés.
+          écrasés. La connexion LinkedIn et le planning se gèrent depuis la
+          liste des agents.
         </p>
       </header>
 
@@ -129,21 +70,6 @@ export default async function EditAgentPage({
         action={boundUpdate}
         initial={agent}
         onDelete={boundDelete}
-      />
-
-      <LinkedinCard
-        agentId={id}
-        member={linkedinMember}
-        onDisconnect={boundDisconnectLinkedin}
-        onTest={boundTestLinkedin}
-      />
-
-      <ScheduleSection
-        agentId={id}
-        configs={configs}
-        addAction={boundAddSchedule}
-        updateAction={boundUpdateSchedule}
-        deleteAction={boundDeleteSchedule}
       />
     </div>
   );
