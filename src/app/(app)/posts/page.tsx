@@ -3,10 +3,13 @@ import { redirect } from "next/navigation";
 import { Bot, ImageOff, Inbox } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 
-type SearchParams = { agent?: string };
+const PAGE_SIZE = 6;
+
+type SearchParams = { agent?: string; page?: string };
 
 type PostRow = {
   id: string;
@@ -48,7 +51,7 @@ export default async function PostsPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { agent: selectedAgent } = await searchParams;
+  const { agent: selectedAgent, page: pageParam } = await searchParams;
 
   // Fetch agents for the filter pills.
   const { data: agentsRows } = await supabase
@@ -59,24 +62,36 @@ export default async function PostsPage({
 
   const agents = agentsRows ?? [];
 
+  const requestedPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (requestedPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   // Fetch posts joined with agents, scoped to current user.
   let query = supabase
     .from("linkedin_posts")
     .select(
       "id, agent_id, post_text, image_url, post_link, is_published, created_at, agents!inner(id, title, user_id)",
+      { count: "exact" },
     )
     .eq("agents.user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(60);
+    .range(from, to);
 
   if (selectedAgent) {
     query = query.eq("agent_id", selectedAgent);
   }
 
-  const { data: postsRaw, error } = await query;
+  const { data: postsRaw, count, error } = await query;
   const posts = ((postsRaw as unknown as PostRow[]) ?? []).filter(
     (p) => p.agents !== null,
   );
+
+  const total = count ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, pageCount);
+
+  const paginationParams = new URLSearchParams();
+  if (selectedAgent) paginationParams.set("agent", selectedAgent);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,9 +101,9 @@ export default async function PostsPage({
           Posts LinkedIn
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {posts.length === 0
+          {total === 0
             ? "Aucun post pour le moment."
-            : `${posts.length} post${posts.length > 1 ? "s" : ""} ${selectedAgent ? "pour cet agent" : "tous agents confondus"}.`}
+            : `${total} post${total > 1 ? "s" : ""} ${selectedAgent ? "pour cet agent" : "tous agents confondus"}.`}
         </p>
       </header>
 
@@ -110,14 +125,22 @@ export default async function PostsPage({
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Erreur lors du chargement : {error.message}
         </p>
-      ) : posts.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState hasAgents={agents.length > 0} />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            pageCount={pageCount}
+            basePath="/posts"
+            searchParams={paginationParams}
+          />
+        </>
       )}
     </div>
   );

@@ -10,9 +10,12 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AgentDrawer, type AgentDrawerData } from "./_components/agent-drawer";
+
+const PAGE_SIZE = 6;
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -20,21 +23,40 @@ const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   year: "numeric",
 });
 
-export default async function AgentsPage() {
+export default async function AgentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: agentsRaw, error } = await supabase
+  const requestedPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (requestedPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const {
+    data: agentsRaw,
+    count,
+    error,
+  } = await supabase
     .from("agents")
     .select(
       `id, title, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at,
        linkedin_access_token, linkedin_member_name, linkedin_member_picture, linkedin_connected_at,
        agent_schedule_config (id, custom_cron, timezone, created_at)`,
+      { count: "exact" },
     )
-    .order("updated_at", { ascending: false, nullsFirst: false });
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .range(from, to);
+
+  const total = count ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, pageCount);
 
   // Strip the access token before sending to the client. Only a derived boolean leaves the server.
   type AgentRow = NonNullable<typeof agentsRaw>[number];
@@ -98,14 +120,21 @@ export default async function AgentsPage() {
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Erreur : {error.message}
         </p>
-      ) : agents.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {agents.map((a) => (
-            <AgentCard key={a.id} agent={a} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {agents.map((a) => (
+              <AgentCard key={a.id} agent={a} />
+            ))}
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            pageCount={pageCount}
+            basePath="/agents"
+          />
+        </>
       )}
 
       <AgentDrawer agents={drawerAgents} />
