@@ -50,7 +50,7 @@ export function Drawer({
       <div
         onClick={onClose}
         className={cn(
-          "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300",
+          "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-[400ms] ease-soft",
           open ? "opacity-100" : "opacity-0",
         )}
       />
@@ -61,7 +61,7 @@ export function Drawer({
         aria-modal="true"
         aria-labelledby={title ? "drawer-title" : undefined}
         className={cn(
-          "absolute right-0 top-0 h-svh w-full overflow-hidden border-l border-border/60 bg-background shadow-2xl transition-transform duration-300 ease-out lg:w-1/2",
+          "absolute right-0 top-0 h-svh w-full overflow-hidden border-l border-border/60 bg-background shadow-2xl transition-transform duration-[400ms] ease-swift lg:w-1/2",
           open ? "translate-x-0" : "translate-x-full",
           className,
         )}

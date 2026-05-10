@@ -423,7 +423,7 @@ function DeleteButton({ onConfirm }: { onConfirm: () => Promise<void> }) {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-sm">
+    <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-sm animate-slide-in-right">
       <AlertTriangle className="size-4 text-destructive" />
       <span className="text-destructive">Confirmer ?</span>
       <Button

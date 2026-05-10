@@ -223,7 +223,7 @@ function ScheduleRow({
   return (
     <div className="rounded-md border border-border/60 p-3">
       {confirmDelete ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-destructive animate-slide-in-right">
           <AlertTriangle className="size-4" />
           <span>Supprimer ce planning ?</span>
           <Button

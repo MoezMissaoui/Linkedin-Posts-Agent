@@ -116,7 +116,7 @@ export function LinkedinCard({
         )}
 
         {confirmDisconnect ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive animate-slide-in-right">
             <AlertTriangle className="size-4" />
             <span>Déconnecter LinkedIn et effacer le token ?</span>
             <Button

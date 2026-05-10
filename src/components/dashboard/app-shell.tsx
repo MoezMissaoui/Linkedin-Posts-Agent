@@ -57,7 +57,7 @@ export function AppShell({
       {/* Desktop sidebar — sticky to viewport, collapsible */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-svh shrink-0 flex-col self-start border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex",
+          "sticky top-0 hidden h-svh shrink-0 flex-col self-start border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width] duration-300 ease-swift md:flex",
           collapsed ? "w-16" : "w-64",
         )}
       >
@@ -80,14 +80,14 @@ export function AppShell({
         <div
           onClick={() => setOpen(false)}
           className={cn(
-            "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity",
+            "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-[400ms] ease-soft",
             open ? "opacity-100" : "opacity-0",
           )}
         />
         {/* Panel */}
         <aside
           className={cn(
-            "absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground shadow-xl transition-transform",
+            "absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground shadow-xl transition-transform duration-[400ms] ease-swift",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -320,8 +320,8 @@ function UserMenu({
         <div
           role="menu"
           className={cn(
-            "absolute bottom-full z-50 mb-2 w-52 overflow-hidden rounded-md border border-border/60 bg-popover p-1 shadow-lg",
-            collapsed ? "left-0" : "right-0",
+            "absolute bottom-full z-50 mb-2 w-52 overflow-hidden rounded-md border border-border/60 bg-popover p-1 shadow-lg origin-bottom-right animate-pop-in",
+            collapsed ? "left-0 origin-bottom-left" : "right-0",
           )}
         >
           <Link
