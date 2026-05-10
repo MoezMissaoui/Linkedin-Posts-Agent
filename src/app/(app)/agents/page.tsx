@@ -47,7 +47,7 @@ export default async function AgentsPage({
   } = await supabase
     .from("agents")
     .select(
-      `id, title, schedule, active, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at,
+      `id, title, schedule, active, enable_post_picture, approval_channel, updated_at, created_at,
        linkedin_access_token, linkedin_member_name, linkedin_member_picture, linkedin_connected_at,
        agent_schedule_config (id, custom_cron, timezone, created_at)`,
       { count: "exact" },
@@ -76,7 +76,6 @@ export default async function AgentsPage({
       schedule: a.schedule,
       enable_post_picture: a.enable_post_picture,
       approval_channel: a.approval_channel,
-      confirmation_channel: a.confirmation_channel,
       updated_at: a.updated_at,
       created_at: a.created_at,
       linkedin_connected: linkedinConnected,
@@ -162,7 +161,6 @@ type AgentCardRow = {
   schedule: boolean;
   enable_post_picture: boolean;
   approval_channel: string | null;
-  confirmation_channel: string | null;
   updated_at: string | null;
   created_at: string;
   linkedin_connected: boolean;
@@ -224,10 +222,6 @@ function AgentCard({ agent }: { agent: AgentCardRow }) {
           ) : null}
           {agent.approval_channel ? (
             <Pill>Approval · {agent.approval_channel}</Pill>
-          ) : null}
-          {agent.confirmation_channel &&
-          agent.confirmation_channel !== agent.approval_channel ? (
-            <Pill>Confirm · {agent.confirmation_channel}</Pill>
           ) : null}
         </div>
 

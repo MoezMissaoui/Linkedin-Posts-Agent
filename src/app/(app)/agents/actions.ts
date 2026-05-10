@@ -42,7 +42,6 @@ type ParsedFields = {
   telegram_chat_id: string | null;
   telegram_start_command: string | null;
   approval_channel: ChannelType | null;
-  confirmation_channel: ChannelType | null;
   enable_post_picture: boolean;
   // Secrets (handled separately)
   linkedin_access_token: string;
@@ -102,7 +101,6 @@ function parse(formData: FormData): ParsedFields {
       SHORT_MAX,
     ),
     approval_channel: pickChannel(formData, "approval_channel"),
-    confirmation_channel: pickChannel(formData, "confirmation_channel"),
     enable_post_picture: pickBool(formData, "enable_post_picture"),
     linkedin_access_token: String(
       formData.get("linkedin_access_token") ?? "",
@@ -178,30 +176,34 @@ function validate(
     }
   }
 
-  // Channels
+  // Channel — required, dictates which credentials block must be filled.
   if (!fields.approval_channel) {
     fieldErrors.approval_channel = "Choisis un canal.";
   }
-  if (!fields.confirmation_channel) {
-    fieldErrors.confirmation_channel = "Choisis un canal.";
-  }
 
-  // E-mail
-  if (!fields.email) {
-    fieldErrors.email = "E-mail requis.";
-  } else if (!EMAIL_RE.test(fields.email)) {
+  // E-mail — required only when the channel is email.
+  if (fields.approval_channel === "email") {
+    if (!fields.email) {
+      fieldErrors.email = "E-mail requis.";
+    } else if (!EMAIL_RE.test(fields.email)) {
+      fieldErrors.email = "E-mail invalide.";
+    }
+  } else if (fields.email && !EMAIL_RE.test(fields.email)) {
+    // Channel != email but a value was kept from before — still validate format.
     fieldErrors.email = "E-mail invalide.";
   }
 
-  // Telegram
-  if (!fields.telegram_chat_id) {
-    fieldErrors.telegram_chat_id = "Chat ID requis.";
-  }
-  if (!fields.telegram_start_command) {
-    fieldErrors.telegram_start_command = "Commande de démarrage requise.";
-  }
-  if (opts.requireBotToken && !fields.telegram_bot_token) {
-    fieldErrors.telegram_bot_token = "Bot token requis.";
+  // Telegram — required only when the channel is telegram.
+  if (fields.approval_channel === "telegram") {
+    if (!fields.telegram_chat_id) {
+      fieldErrors.telegram_chat_id = "Chat ID requis.";
+    }
+    if (!fields.telegram_start_command) {
+      fieldErrors.telegram_start_command = "Commande de démarrage requise.";
+    }
+    if (opts.requireBotToken && !fields.telegram_bot_token) {
+      fieldErrors.telegram_bot_token = "Bot token requis.";
+    }
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -222,7 +224,6 @@ function basePayload(fields: ParsedFields) {
     telegram_chat_id: fields.telegram_chat_id,
     telegram_start_command: fields.telegram_start_command,
     approval_channel: fields.approval_channel,
-    confirmation_channel: fields.confirmation_channel,
     enable_post_picture: fields.enable_post_picture,
   };
 }

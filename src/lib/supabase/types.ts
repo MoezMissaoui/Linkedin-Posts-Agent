@@ -19,7 +19,6 @@ export type Database = {
           linkedin_member_picture: string | null;
           linkedin_connected_at: string | null;
           approval_channel: ChannelType | null;
-          confirmation_channel: ChannelType | null;
           enable_post_picture: boolean;
           schedule: boolean;
           active: boolean;
@@ -50,7 +49,6 @@ export type Database = {
           linkedin_member_picture?: string | null;
           linkedin_connected_at?: string | null;
           approval_channel?: ChannelType | null;
-          confirmation_channel?: ChannelType | null;
           enable_post_picture?: boolean;
           schedule?: boolean;
           active?: boolean;

@@ -56,6 +56,12 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
 
   const telegramTokenPresent = Boolean(initial?.telegram_bot_token);
 
+  // Track the selected approval channel so we can show only the relevant
+  // credentials section (Email or Telegram) and require its fields.
+  const [selectedChannel, setSelectedChannel] = React.useState<string>(
+    initial?.approval_channel ?? "",
+  );
+
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {state?.message && !state.ok ? (
@@ -134,10 +140,10 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
         <CardHeader>
           <CardTitle>Canaux</CardTitle>
           <CardDescription>
-            Comment recevoir les approbations et confirmations
+            Comment recevoir les demandes d&apos;approbation
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-5 sm:grid-cols-2">
+        <CardContent>
           <Field
             id="approval_channel"
             label="Canal d'approbation"
@@ -150,106 +156,97 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
               name="approval_channel"
               defaultValue={initial?.approval_channel ?? ""}
               required
-            />
-          </Field>
-          <Field
-            id="confirmation_channel"
-            label="Canal de confirmation"
-            hint="Après publication"
-            error={state?.fieldErrors?.confirmation_channel}
-            required
-          >
-            <SelectChannel
-              id="confirmation_channel"
-              name="confirmation_channel"
-              defaultValue={initial?.confirmation_channel ?? ""}
-              required
+              onChange={setSelectedChannel}
             />
           </Field>
         </CardContent>
       </Card>
 
-      {/* ---------------- Notification e-mail ---------------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>E-mail</CardTitle>
-          <CardDescription>
-            Adresse à utiliser quand un canal e-mail est sélectionné
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Field
-            id="email"
-            label="E-mail"
-            error={state?.fieldErrors?.email}
-            required
-          >
-            <Input
+      {/* ---------------- Notification e-mail (only when channel = email) */}
+      {selectedChannel === "email" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>E-mail</CardTitle>
+            <CardDescription>
+              Adresse vers laquelle envoyer les demandes d&apos;approbation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Field
               id="email"
-              name="email"
-              type="email"
-              defaultValue={initial?.email ?? ""}
-              maxLength={200}
-              placeholder="vous@exemple.com"
+              label="E-mail"
+              error={state?.fieldErrors?.email}
               required
-            />
-          </Field>
-        </CardContent>
-      </Card>
+            >
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                defaultValue={initial?.email ?? ""}
+                maxLength={200}
+                placeholder="vous@exemple.com"
+                required
+              />
+            </Field>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      {/* ---------------- Telegram ---------------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Telegram</CardTitle>
-          <CardDescription>
-            Bot et chat utilisés pour les approbations / confirmations
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          <SecretField
-            id="telegram_bot_token"
-            label="Bot token"
-            mode={mode}
-            present={telegramTokenPresent}
-            clearName="telegram_clear"
-            required={mode === "create"}
-            error={state?.fieldErrors?.telegram_bot_token}
-          />
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field
-              id="telegram_chat_id"
-              label="Chat ID"
-              error={state?.fieldErrors?.telegram_chat_id}
-              required
-            >
-              <Input
+      {/* ---------------- Telegram (only when channel = telegram) ---------- */}
+      {selectedChannel === "telegram" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Telegram</CardTitle>
+            <CardDescription>
+              Bot et chat utilisés pour les approbations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <SecretField
+              id="telegram_bot_token"
+              label="Bot token"
+              mode={mode}
+              present={telegramTokenPresent}
+              clearName="telegram_clear"
+              required={mode === "create"}
+              error={state?.fieldErrors?.telegram_bot_token}
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field
                 id="telegram_chat_id"
-                name="telegram_chat_id"
-                defaultValue={initial?.telegram_chat_id ?? ""}
-                maxLength={200}
-                placeholder="614773010"
+                label="Chat ID"
+                error={state?.fieldErrors?.telegram_chat_id}
                 required
-              />
-            </Field>
-            <Field
-              id="telegram_start_command"
-              label="Commande de démarrage"
-              hint="Ex. : GO"
-              error={state?.fieldErrors?.telegram_start_command}
-              required
-            >
-              <Input
+              >
+                <Input
+                  id="telegram_chat_id"
+                  name="telegram_chat_id"
+                  defaultValue={initial?.telegram_chat_id ?? ""}
+                  maxLength={200}
+                  placeholder="614773010"
+                  required
+                />
+              </Field>
+              <Field
                 id="telegram_start_command"
-                name="telegram_start_command"
-                defaultValue={initial?.telegram_start_command ?? ""}
-                maxLength={200}
-                placeholder="GO"
+                label="Commande de démarrage"
+                hint="Ex. : GO"
+                error={state?.fieldErrors?.telegram_start_command}
                 required
-              />
-            </Field>
-          </div>
-        </CardContent>
-      </Card>
+              >
+                <Input
+                  id="telegram_start_command"
+                  name="telegram_start_command"
+                  defaultValue={initial?.telegram_start_command ?? ""}
+                  maxLength={200}
+                  placeholder="GO"
+                  required
+                />
+              </Field>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* ---------------- Footer ---------------- */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -309,11 +306,13 @@ function SelectChannel({
   name,
   defaultValue,
   required,
+  onChange,
 }: {
   id: string;
   name: string;
   defaultValue: string;
   required?: boolean;
+  onChange?: (value: string) => void;
 }) {
   return (
     <select
@@ -321,6 +320,7 @@ function SelectChannel({
       name={name}
       defaultValue={defaultValue}
       required={required}
+      onChange={(e) => onChange?.(e.target.value)}
       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {CHANNEL_OPTIONS.map((opt) => (
