@@ -256,20 +256,35 @@ function validateScheduleInput(formData: FormData): {
   return { ok: true, cron, timezone };
 }
 
-// Recompute agents.schedule from the actual count of configs.
+// Recompute agents.schedule and agents.active from the live state.
+//   • schedule = (≥1 config exists)
+//   • active   = (≥1 config exists AND linkedin_access_token is set)
+// The DB triggers enforce the same invariants — we mirror them here so the
+// intent is explicit in app code and doesn't depend on trigger order.
 async function syncAgentSchedule(
   supabase: SupabaseServerClient,
   agentId: string,
 ) {
-  const { count } = await supabase
-    .from("agent_schedule_config")
-    .select("*", { count: "exact", head: true })
-    .eq("agent_id", agentId);
+  const [{ count }, { data: agentRow }] = await Promise.all([
+    supabase
+      .from("agent_schedule_config")
+      .select("*", { count: "exact", head: true })
+      .eq("agent_id", agentId),
+    supabase
+      .from("agents")
+      .select("linkedin_access_token")
+      .eq("id", agentId)
+      .maybeSingle(),
+  ]);
+
+  const hasConfig = (count ?? 0) > 0;
+  const linkedinConnected = Boolean(agentRow?.linkedin_access_token);
 
   await supabase
     .from("agents")
     .update({
-      schedule: (count ?? 0) > 0,
+      schedule: hasConfig,
+      active: hasConfig && linkedinConnected,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agentId);
@@ -370,6 +385,9 @@ export async function disconnectLinkedin(agentId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
+  // Disconnecting LinkedIn breaks one of the two activation prerequisites,
+  // so the agent must become inactive. DB trigger enforces this anyway —
+  // setting it explicitly here makes the intent clear in code.
   const { error } = await supabase
     .from("agents")
     .update({
@@ -378,6 +396,7 @@ export async function disconnectLinkedin(agentId: string): Promise<void> {
       linkedin_member_name: null,
       linkedin_member_picture: null,
       linkedin_connected_at: null,
+      active: false,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agentId);

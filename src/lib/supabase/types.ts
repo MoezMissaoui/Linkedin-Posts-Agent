@@ -23,6 +23,7 @@ export type Database = {
           confirmation_channel: ChannelType | null;
           enable_post_picture: boolean;
           schedule: boolean;
+          active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -45,6 +46,7 @@ export type Database = {
           confirmation_channel?: ChannelType | null;
           enable_post_picture?: boolean;
           schedule?: boolean;
+          active?: boolean;
           created_at?: string;
           updated_at?: string;
         };

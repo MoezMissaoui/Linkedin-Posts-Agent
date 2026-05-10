@@ -102,6 +102,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Auto-activate if the agent already has at least one schedule config.
+    // Mirrors the DB trigger so the intent is explicit in app code as well.
+    const { count: configCount } = await supabase
+      .from("agent_schedule_config")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId);
+    const shouldActivate = (configCount ?? 0) > 0;
+
     const now = new Date().toISOString();
     const { error: dbError } = await supabase
       .from("agents")
@@ -111,6 +119,7 @@ export async function GET(req: NextRequest) {
         linkedin_member_name: memberName,
         linkedin_member_picture: memberPicture,
         linkedin_connected_at: now,
+        ...(shouldActivate ? { active: true } : {}),
         updated_at: now,
       })
       .eq("id", agentId);
