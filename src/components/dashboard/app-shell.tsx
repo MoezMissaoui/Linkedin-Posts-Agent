@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, MoreVertical, User as UserIcon, X } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -143,36 +143,112 @@ function SidebarBody({
       </div>
 
       <div className="border-t border-border/60 p-3">
-        <Link
-          href="/profile"
-          onClick={onNavigate}
-          className="flex w-full items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent"
-        >
-          <div
-            className="grid size-9 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
-            aria-hidden
-          >
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {displayName || "Utilisateur"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
-          </div>
-        </Link>
-        <form action={signOut} className="mt-1">
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="size-4" />
-            Déconnexion
-          </Button>
-        </form>
+        <UserMenu
+          email={email}
+          displayName={displayName}
+          initials={initials}
+          onNavigate={onNavigate}
+        />
       </div>
     </>
+  );
+}
+
+function UserMenu({
+  email,
+  displayName,
+  initials,
+  onNavigate,
+}: {
+  email: string;
+  displayName: string;
+  initials: string;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDocPointer = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const closeAndNavigate = () => {
+    setOpen(false);
+    onNavigate?.();
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center gap-2 rounded-md p-2">
+        <div
+          className="grid size-9 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
+          aria-hidden
+        >
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">
+            {displayName || "Utilisateur"}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{email}</p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="shrink-0"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label="Ouvrir le menu utilisateur"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <MoreVertical className="size-4" />
+        </Button>
+      </div>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute bottom-full right-0 z-50 mb-2 w-52 overflow-hidden rounded-md border border-border/60 bg-popover p-1 shadow-lg"
+        >
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={closeAndNavigate}
+            className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <UserIcon className="size-4 text-muted-foreground" />
+            Profil
+          </Link>
+          <form action={signOut}>
+            <button
+              type="submit"
+              role="menuitem"
+              className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <LogOut className="size-4" />
+              Se déconnecter
+            </button>
+          </form>
+        </div>
+      ) : null}
+    </div>
   );
 }
