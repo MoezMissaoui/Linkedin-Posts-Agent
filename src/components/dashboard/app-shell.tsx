@@ -128,9 +128,9 @@ function SidebarBody({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-5 py-4">
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-border/60 px-5">
         <Link href="/dashboard" onClick={onNavigate}>
-          <Logo size="md" />
+          <Logo size="sm" />
         </Link>
         {closeButton ?? null}
       </div>
