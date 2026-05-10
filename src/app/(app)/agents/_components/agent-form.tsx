@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/lib/supabase/types";
 import type { AgentFormState } from "../actions";
+import { PromptFields } from "./prompt-fields";
 
 const CHANNEL_OPTIONS = [
   { value: "", label: "Aucun" },
@@ -89,19 +89,24 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
             />
           </Field>
 
-          <Field
-            id="prompt_system"
-            label="Prompt système"
-            hint="Instructions complètes pour le LLM (ton, contraintes, format de sortie…)"
-          >
-            <Textarea
-              id="prompt_system"
-              name="prompt_system"
-              defaultValue={initial?.prompt_system ?? ""}
-              rows={10}
-              placeholder="You are an expert..."
-            />
-          </Field>
+          <PromptFields
+            initial={
+              initial
+                ? {
+                    prompt_mode: initial.prompt_mode ?? null,
+                    prompt_role: initial.prompt_role ?? null,
+                    prompt_topic: initial.prompt_topic ?? null,
+                    prompt_audience: initial.prompt_audience ?? null,
+                    prompt_hook_emoji: initial.prompt_hook_emoji ?? null,
+                    prompt_hook_prefix: initial.prompt_hook_prefix ?? null,
+                    prompt_footer: initial.prompt_footer ?? null,
+                    prompt_has_code: initial.prompt_has_code ?? true,
+                    prompt_code_language: initial.prompt_code_language ?? null,
+                    prompt_system: initial.prompt_system ?? null,
+                  }
+                : undefined
+            }
+          />
         </CardContent>
       </Card>
 

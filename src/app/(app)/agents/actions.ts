@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { assembleSystemPrompt } from "@/lib/prompt-template";
 import type { AgentUpdate, ChannelType } from "@/lib/supabase/types";
+
+type PromptMode = "assistant" | "advanced";
 
 export type AgentFormState = {
   ok: boolean;
@@ -23,7 +26,18 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ParsedFields = {
   title: string;
-  prompt_system: string | null;
+  // Prompt system: either typed by hand (advanced) or assembled from the
+  // structured fields below (assistant).
+  prompt_mode: PromptMode;
+  prompt_system_raw: string | null; // user-typed text, used in advanced mode
+  prompt_role: string | null;
+  prompt_topic: string | null;
+  prompt_audience: string | null;
+  prompt_hook_emoji: string | null;
+  prompt_hook_prefix: string | null;
+  prompt_footer: string | null;
+  prompt_has_code: boolean;
+  prompt_code_language: string | null;
   email: string | null;
   telegram_chat_id: string | null;
   telegram_start_command: string | null;
@@ -58,10 +72,28 @@ function pickBool(formData: FormData, name: string) {
   return v === "on" || v === "true" || v === "1";
 }
 
+function pickPromptMode(formData: FormData): PromptMode {
+  const v = String(formData.get("prompt_mode") ?? "").trim();
+  return v === "advanced" ? "advanced" : "assistant";
+}
+
 function parse(formData: FormData): ParsedFields {
   return {
     title: String(formData.get("title") ?? "").trim().slice(0, TITLE_MAX),
-    prompt_system: pickString(formData, "prompt_system", PROMPT_MAX),
+    prompt_mode: pickPromptMode(formData),
+    prompt_system_raw: pickString(formData, "prompt_system", PROMPT_MAX),
+    prompt_role: pickString(formData, "prompt_role", SHORT_MAX),
+    prompt_topic: pickString(formData, "prompt_topic", SHORT_MAX),
+    prompt_audience: pickString(formData, "prompt_audience", SHORT_MAX),
+    prompt_hook_emoji: pickString(formData, "prompt_hook_emoji", 16),
+    prompt_hook_prefix: pickString(formData, "prompt_hook_prefix", SHORT_MAX),
+    prompt_footer: pickString(formData, "prompt_footer", PROMPT_MAX),
+    prompt_has_code: pickBool(formData, "prompt_has_code"),
+    prompt_code_language: pickString(
+      formData,
+      "prompt_code_language",
+      SHORT_MAX,
+    ),
     email: pickString(formData, "email", SHORT_MAX),
     telegram_chat_id: pickString(formData, "telegram_chat_id", SHORT_MAX),
     telegram_start_command: pickString(
@@ -80,6 +112,37 @@ function parse(formData: FormData): ParsedFields {
       formData.get("telegram_bot_token") ?? "",
     ).trim().slice(0, TOKEN_MAX),
     telegram_clear: pickBool(formData, "telegram_clear"),
+  };
+}
+
+function buildPromptPayload(fields: ParsedFields) {
+  // In assistant mode: assemble the final prompt from structured fields.
+  // In advanced mode: use the raw textarea content as-is.
+  const promptSystem =
+    fields.prompt_mode === "assistant"
+      ? assembleSystemPrompt({
+          role: fields.prompt_role ?? "",
+          topic: fields.prompt_topic ?? "",
+          audience: fields.prompt_audience ?? "",
+          hookEmoji: fields.prompt_hook_emoji ?? "",
+          hookPrefix: fields.prompt_hook_prefix ?? "",
+          footer: fields.prompt_footer ?? "",
+          hasCode: fields.prompt_has_code,
+          codeLanguage: fields.prompt_code_language ?? "",
+        })
+      : fields.prompt_system_raw;
+
+  return {
+    prompt_mode: fields.prompt_mode,
+    prompt_role: fields.prompt_role,
+    prompt_topic: fields.prompt_topic,
+    prompt_audience: fields.prompt_audience,
+    prompt_hook_emoji: fields.prompt_hook_emoji,
+    prompt_hook_prefix: fields.prompt_hook_prefix,
+    prompt_footer: fields.prompt_footer,
+    prompt_has_code: fields.prompt_has_code,
+    prompt_code_language: fields.prompt_code_language,
+    prompt_system: promptSystem,
   };
 }
 
@@ -102,7 +165,7 @@ function validate(fields: ParsedFields): AgentFormState | null {
 function basePayload(fields: ParsedFields) {
   return {
     title: fields.title,
-    prompt_system: fields.prompt_system,
+    ...buildPromptPayload(fields),
     email: fields.email,
     telegram_chat_id: fields.telegram_chat_id,
     telegram_start_command: fields.telegram_start_command,
