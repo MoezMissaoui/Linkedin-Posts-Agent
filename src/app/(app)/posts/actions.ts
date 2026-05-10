@@ -19,5 +19,6 @@ export async function deletePost(id: string): Promise<void> {
 
   revalidatePath("/posts");
   revalidatePath("/dashboard");
-  redirect("/posts");
+  // No redirect here — client handles navigation so try/catch on the caller
+  // doesn't swallow Next's NEXT_REDIRECT signal as an error.
 }

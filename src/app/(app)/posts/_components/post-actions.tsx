@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, ExternalLink, Loader2, Trash2 } from "lucide-react";
 
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function PostActions({ postLink, onDelete }: Props) {
+  const router = useRouter();
   const [confirm, setConfirm] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
 
@@ -20,7 +22,7 @@ export function PostActions({ postLink, onDelete }: Props) {
       try {
         await onDelete();
         toast.success("Post supprimé.");
-        // deletePost performs its own redirect via server action
+        router.push("/posts");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Erreur inattendue.");
         setConfirm(false);
