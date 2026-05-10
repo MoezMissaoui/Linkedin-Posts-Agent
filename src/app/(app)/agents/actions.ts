@@ -375,6 +375,9 @@ export async function disconnectLinkedin(agentId: string): Promise<void> {
     .update({
       linkedin_access_token: null,
       linkedin_member_id: null,
+      linkedin_member_name: null,
+      linkedin_member_picture: null,
+      linkedin_connected_at: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agentId);
@@ -382,6 +385,69 @@ export async function disconnectLinkedin(agentId: string): Promise<void> {
 
   revalidatePath(`/agents/${agentId}`);
   revalidatePath("/agents");
+}
+
+export type LinkedinTestResult = {
+  ok: boolean;
+  message: string;
+  refreshed?: {
+    name: string | null;
+    picture: string | null;
+  };
+};
+
+export async function testLinkedinConnection(
+  agentId: string,
+): Promise<LinkedinTestResult> {
+  if (!agentId) return { ok: false, message: "ID d'agent manquant." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Session expirée." };
+
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("linkedin_access_token")
+    .eq("id", agentId)
+    .maybeSingle();
+
+  if (!agent?.linkedin_access_token) {
+    return { ok: false, message: "Aucun token LinkedIn enregistré." };
+  }
+
+  // Lazy import to keep node-only deps out of generic action surface.
+  const { getUserInfo } = await import("@/lib/linkedin");
+  try {
+    const info = await getUserInfo(agent.linkedin_access_token);
+    // Refresh stored name/picture in case the user updated their LinkedIn.
+    await supabase
+      .from("agents")
+      .update({
+        linkedin_member_name: info.name ?? null,
+        linkedin_member_picture: info.picture ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", agentId);
+
+    revalidatePath(`/agents/${agentId}`);
+    revalidatePath("/agents");
+    return {
+      ok: true,
+      message: `Connexion valide — ${info.name ?? "compte LinkedIn"}.`,
+      refreshed: { name: info.name ?? null, picture: info.picture ?? null },
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erreur inattendue.";
+    const isAuth = /401|invalid|expired|revoke/i.test(msg);
+    return {
+      ok: false,
+      message: isAuth
+        ? "Token rejeté par LinkedIn (expiré ou révoqué). Reconnecte le compte."
+        : `Test échoué : ${msg}`,
+    };
+  }
 }
 
 export async function deleteAgent(id: string): Promise<void> {

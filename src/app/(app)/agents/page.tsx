@@ -4,14 +4,15 @@ import {
   Bot,
   CalendarClock,
   Image as ImageIcon,
+  Link2,
   Plus,
-  ChevronRight,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { AgentDrawer, type AgentDrawerData } from "./_components/agent-drawer";
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -26,12 +27,52 @@ export default async function AgentsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: agents, error } = await supabase
+  const { data: agentsRaw, error } = await supabase
     .from("agents")
     .select(
-      "id, title, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at",
+      `id, title, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at,
+       linkedin_access_token, linkedin_member_name, linkedin_member_picture, linkedin_connected_at,
+       agent_schedule_config (id, custom_cron, timezone, created_at)`,
     )
     .order("updated_at", { ascending: false, nullsFirst: false });
+
+  // Strip the access token before sending to the client. Only a derived boolean leaves the server.
+  type AgentRow = NonNullable<typeof agentsRaw>[number];
+  const agents: AgentCardRow[] = (agentsRaw ?? []).map((a: AgentRow) => ({
+    id: a.id,
+    title: a.title,
+    schedule: a.schedule,
+    enable_post_picture: a.enable_post_picture,
+    approval_channel: a.approval_channel,
+    confirmation_channel: a.confirmation_channel,
+    updated_at: a.updated_at,
+    created_at: a.created_at,
+    linkedin_connected: Boolean(a.linkedin_access_token),
+    schedule_count: (a.agent_schedule_config ?? []).length,
+  }));
+
+  const drawerAgents: AgentDrawerData[] = (agentsRaw ?? []).map(
+    (a: AgentRow) => ({
+      id: a.id,
+      title: a.title,
+      linkedin: {
+        connected: Boolean(a.linkedin_access_token),
+        member_name: a.linkedin_member_name,
+        member_picture: a.linkedin_member_picture,
+        connected_at: a.linkedin_connected_at,
+      },
+      schedules: (a.agent_schedule_config ?? [])
+        .slice()
+        .sort((a, b) =>
+          (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+        )
+        .map((c) => ({
+          id: c.id,
+          custom_cron: c.custom_cron,
+          timezone: c.timezone,
+        })),
+    }),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +98,7 @@ export default async function AgentsPage() {
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Erreur : {error.message}
         </p>
-      ) : !agents || agents.length === 0 ? (
+      ) : agents.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -66,68 +107,119 @@ export default async function AgentsPage() {
           ))}
         </div>
       )}
+
+      <AgentDrawer agents={drawerAgents} />
     </div>
   );
 }
 
-function AgentCard({
-  agent,
-}: {
-  agent: {
-    id: string;
-    title: string | null;
-    schedule: boolean;
-    enable_post_picture: boolean;
-    approval_channel: string | null;
-    confirmation_channel: string | null;
-    updated_at: string | null;
-    created_at: string;
-  };
-}) {
+type AgentCardRow = {
+  id: string;
+  title: string | null;
+  schedule: boolean;
+  enable_post_picture: boolean;
+  approval_channel: string | null;
+  confirmation_channel: string | null;
+  updated_at: string | null;
+  created_at: string;
+  linkedin_connected: boolean;
+  schedule_count: number;
+};
+
+function AgentCard({ agent }: { agent: AgentCardRow }) {
   const updated = agent.updated_at ?? agent.created_at;
 
   return (
+    <Card className="flex h-full flex-col overflow-hidden transition-colors hover:border-foreground/30">
+      <CardContent className="flex flex-1 flex-col gap-4 p-5">
+        <Link
+          href={`/agents/${agent.id}`}
+          className="group flex items-start gap-3 focus:outline-none"
+        >
+          <div className="grid size-10 place-items-center rounded-lg brand-gradient text-white">
+            <Bot className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-semibold group-hover:underline">
+              {agent.title || "Agent sans titre"}
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Mis à jour le {dateFormatter.format(new Date(updated))}
+            </p>
+          </div>
+        </Link>
+
+        <div className="flex flex-wrap gap-1.5">
+          {agent.linkedin_connected ? (
+            <Pill
+              icon={
+                <Link2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+              }
+              className="border-emerald-500/40 bg-emerald-500/10"
+            >
+              LinkedIn
+            </Pill>
+          ) : null}
+          {agent.schedule_count > 0 ? (
+            <Pill icon={<CalendarClock className="size-3" />}>
+              {agent.schedule_count} planning{agent.schedule_count > 1 ? "s" : ""}
+            </Pill>
+          ) : null}
+          {agent.enable_post_picture ? (
+            <Pill icon={<ImageIcon className="size-3" />}>Image</Pill>
+          ) : null}
+          {agent.approval_channel ? (
+            <Pill>Approval · {agent.approval_channel}</Pill>
+          ) : null}
+          {agent.confirmation_channel &&
+          agent.confirmation_channel !== agent.approval_channel ? (
+            <Pill>Confirm · {agent.confirmation_channel}</Pill>
+          ) : null}
+        </div>
+
+        <div className="mt-auto flex items-center gap-1 border-t border-border/60 pt-3">
+          <QuickAction
+            href={`/agents?drawer=linkedin&agent=${agent.id}`}
+            icon={<Link2 className="size-3.5" />}
+            label="LinkedIn"
+            tone={agent.linkedin_connected ? "active" : "default"}
+          />
+          <QuickAction
+            href={`/agents?drawer=planning&agent=${agent.id}`}
+            icon={<CalendarClock className="size-3.5" />}
+            label="Planning"
+            tone={agent.schedule_count > 0 ? "active" : "default"}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickAction({
+  href,
+  icon,
+  label,
+  tone,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  tone: "default" | "active";
+}) {
+  return (
     <Link
-      href={`/agents/${agent.id}`}
-      className="group block focus:outline-none"
+      href={href}
+      scroll={false}
+      className={cn(
+        "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+        tone === "active"
+          ? "text-foreground hover:bg-accent"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
     >
-      <Card className="h-full overflow-hidden transition-colors group-hover:border-foreground/30">
-        <CardContent className="flex flex-col gap-4 p-5">
-          <div className="flex items-start gap-3">
-            <div className="grid size-10 place-items-center rounded-lg brand-gradient text-white">
-              <Bot className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-base font-semibold">
-                {agent.title || "Agent sans titre"}
-              </h3>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {agent.schedule ? (
-              <Pill icon={<CalendarClock className="size-3" />}>
-                Planifié
-              </Pill>
-            ) : null}
-            {agent.enable_post_picture ? (
-              <Pill icon={<ImageIcon className="size-3" />}>Image</Pill>
-            ) : null}
-            {agent.approval_channel ? (
-              <Pill>Approval · {agent.approval_channel}</Pill>
-            ) : null}
-            {agent.confirmation_channel &&
-            agent.confirmation_channel !== agent.approval_channel ? (
-              <Pill>Confirm · {agent.confirmation_channel}</Pill>
-            ) : null}
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Mis à jour le {dateFormatter.format(new Date(updated))}
-          </p>
-        </CardContent>
-      </Card>
+      {icon}
+      {label}
     </Link>
   );
 }
@@ -162,10 +254,12 @@ function EmptyState() {
           <Bot className="size-6" />
         </div>
         <div className="flex flex-col gap-1">
-          <p className="text-base font-medium">Tu n&apos;as pas encore d&apos;agent</p>
+          <p className="text-base font-medium">
+            Tu n&apos;as pas encore d&apos;agent
+          </p>
           <p className="text-sm text-muted-foreground">
-            Crée un premier agent pour commencer à générer et publier des
-            posts LinkedIn.
+            Crée un premier agent pour commencer à générer et publier des posts
+            LinkedIn.
           </p>
         </div>
         <Link

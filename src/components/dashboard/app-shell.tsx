@@ -49,7 +49,7 @@ export function AppShell({ email, displayName, children }: Props) {
         <div
           onClick={() => setOpen(false)}
           className={cn(
-            "absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity",
+            "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity",
             open ? "opacity-100" : "opacity-0",
           )}
         />

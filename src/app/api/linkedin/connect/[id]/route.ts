@@ -15,7 +15,9 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id: agentId } = await ctx.params;
-  const origin = new URL(req.url).origin;
+  const url = new URL(req.url);
+  const origin = url.origin;
+  const returnTo = url.searchParams.get("return") === "list" ? "list" : "edit";
 
   const supabase = await createClient();
   const {
@@ -42,7 +44,7 @@ export async function GET(
   // sent to LinkedIn is just the nonce; we compare it on callback.
   const nonce = crypto.randomBytes(16).toString("base64url");
   const cookieStore = await cookies();
-  cookieStore.set(STATE_COOKIE, JSON.stringify({ nonce, agentId }), {
+  cookieStore.set(STATE_COOKIE, JSON.stringify({ nonce, agentId, returnTo }), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

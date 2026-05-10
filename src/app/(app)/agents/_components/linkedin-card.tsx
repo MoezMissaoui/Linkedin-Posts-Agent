@@ -5,47 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleHelp,
+  Clock3,
   Link2,
   Loader2,
   PowerOff,
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const FLASH_MESSAGES: Record<string, { kind: "success" | "error"; text: string }> = {
-  connected: {
-    kind: "success",
-    text: "Compte LinkedIn connecté avec succès.",
-  },
-  expired: {
-    kind: "error",
-    text: "La session OAuth a expiré, relance la connexion.",
-  },
-  invalid_state: {
-    kind: "error",
-    text: "État OAuth invalide (CSRF). Réessaie.",
-  },
-  user_cancelled_login: {
-    kind: "error",
-    text: "Tu as annulé la connexion LinkedIn.",
-  },
-  user_cancelled_authorize: {
-    kind: "error",
-    text: "Tu as refusé d'autoriser l'application.",
-  },
-  access_denied: {
-    kind: "error",
-    text: "LinkedIn a refusé l'autorisation.",
-  },
-  exchange_error: {
-    kind: "error",
-    text: "Échec de l'échange du code contre un token.",
-  },
-  db_error: {
-    kind: "error",
-    text: "Token reçu, mais la sauvegarde en base a échoué.",
-  },
-};
 
 import { Button } from "@/components/ui/button";
 import {
@@ -55,18 +22,49 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type { LinkedinTestResult } from "../actions";
+
+const FLASH_MESSAGES: Record<
+  string,
+  { kind: "success" | "error"; text: string }
+> = {
+  connected: { kind: "success", text: "Compte LinkedIn connecté avec succès." },
+  expired: { kind: "error", text: "La session OAuth a expiré, relance la connexion." },
+  invalid_state: { kind: "error", text: "État OAuth invalide (CSRF). Réessaie." },
+  user_cancelled_login: { kind: "error", text: "Tu as annulé la connexion LinkedIn." },
+  user_cancelled_authorize: { kind: "error", text: "Tu as refusé d'autoriser l'application." },
+  access_denied: { kind: "error", text: "LinkedIn a refusé l'autorisation." },
+  exchange_error: { kind: "error", text: "Échec de l'échange du code contre un token." },
+  db_error: { kind: "error", text: "Token reçu, mais la sauvegarde en base a échoué." },
+};
+
+type Member = {
+  name: string | null;
+  picture: string | null;
+  connectedAt: string | null;
+};
 
 type Props = {
   agentId: string;
-  connected: boolean;
+  member: Member | null;
+  returnTo?: "edit" | "list";
   onDisconnect: () => Promise<void>;
+  onTest: () => Promise<LinkedinTestResult>;
 };
 
-export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
+export function LinkedinCard({
+  agentId,
+  member,
+  returnTo = "edit",
+  onDisconnect,
+  onTest,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [confirmDisconnect, setConfirmDisconnect] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
+  const [testing, startTest] = React.useTransition();
 
   // One-shot toast based on the OAuth callback redirect (?linkedin=<status>).
   React.useEffect(() => {
@@ -79,15 +77,20 @@ export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
     if (flash.kind === "success") toast.success(flash.text);
     else toast.error(flash.text);
 
-    // Strip the param so the toast doesn't fire again on a refresh.
     const params = new URLSearchParams(searchParams.toString());
     params.delete("linkedin");
     const qs = params.toString();
-    router.replace(`/agents/${agentId}${qs ? `?${qs}` : ""}`, { scroll: false });
+    router.replace(
+      `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+      { scroll: false },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const connectHref = `/api/linkedin/connect/${agentId}`;
+  const connected = member !== null;
+  const connectHref =
+    `/api/linkedin/connect/${agentId}` +
+    (returnTo === "list" ? "?return=list" : "");
 
   return (
     <Card>
@@ -104,21 +107,12 @@ export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
           </div>
         </div>
       </CardHeader>
+
       <CardContent className="flex flex-col gap-4">
         {connected ? (
-          <div className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-            <CheckCircle2 className="size-4" />
-            <span>
-              Compte LinkedIn connecté. L&apos;agent peut publier en ton nom.
-            </span>
-          </div>
+          <ConnectedAccount member={member} />
         ) : (
-          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-muted-foreground/60" />
-            <span>
-              Aucun compte connecté. L&apos;agent ne peut pas encore publier.
-            </span>
-          </div>
+          <NotConnected />
         )}
 
         {confirmDisconnect ? (
@@ -162,6 +156,27 @@ export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
           <div className="flex flex-wrap gap-2">
             {connected ? (
               <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={testing}
+                  onClick={() =>
+                    startTest(async () => {
+                      const r = await onTest();
+                      if (r.ok) toast.success(r.message);
+                      else toast.error(r.message);
+                      router.refresh();
+                    })
+                  }
+                >
+                  {testing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CircleHelp className="size-4" />
+                  )}
+                  Tester
+                </Button>
                 <a
                   href={connectHref}
                   className="inline-flex items-center gap-2 rounded-md bg-[#0A66C2] px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#004182]"
@@ -172,6 +187,7 @@ export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => setConfirmDisconnect(true)}
                   className="border-destructive/40 text-destructive hover:bg-destructive/10"
                 >
@@ -192,11 +208,88 @@ export function LinkedinCard({ agentId, connected, onDisconnect }: Props) {
         )}
 
         <p className="text-xs text-muted-foreground">
-          Permissions demandées :{" "}
-          <code className="font-mono">openid profile email w_member_social</code>
-          . Le token est stocké dans <code className="font-mono">agents.linkedin_access_token</code>.
+          Permissions :{" "}
+          <code className="font-mono">openid profile email w_member_social</code>.
         </p>
       </CardContent>
     </Card>
   );
+}
+
+function ConnectedAccount({ member }: { member: Member }) {
+  const initials =
+    (member.name ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase())
+      .join("") || "?";
+
+  return (
+    <div className="flex items-center gap-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-3">
+      <Avatar src={member.picture} initials={initials} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+          <p className="truncate text-sm font-medium">
+            {member.name ?? "Compte LinkedIn"}
+          </p>
+        </div>
+        {member.connectedAt ? (
+          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock3 className="size-3" />
+            Connecté {connectedSince(member.connectedAt)}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function NotConnected() {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+      <span>Aucun compte connecté. L&apos;agent ne peut pas encore publier.</span>
+    </div>
+  );
+}
+
+function Avatar({
+  src,
+  initials,
+}: {
+  src: string | null;
+  initials: string;
+}) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="size-10 shrink-0 rounded-full object-cover ring-1 ring-border"
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className="grid size-10 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
+    >
+      {initials}
+    </div>
+  );
+}
+
+function connectedSince(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86_400_000);
+  if (days < 1) return "aujourd'hui";
+  if (days < 7) return `il y a ${days} j`;
+  if (days < 30) return `il y a ${Math.floor(days / 7)} sem.`;
+  if (days < 365) return `il y a ${Math.floor(days / 30)} mois`;
+  return `il y a ${Math.floor(days / 365)} an(s)`;
 }

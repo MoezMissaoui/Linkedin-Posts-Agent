@@ -14,6 +14,7 @@ import {
   deleteAgent,
   deleteScheduleConfig,
   disconnectLinkedin,
+  testLinkedinConnection,
   updateAgent,
   updateScheduleConfig,
   type AgentFormState,
@@ -91,6 +92,19 @@ export default async function EditAgentPage({
     await disconnectLinkedin(id);
   };
 
+  const boundTestLinkedin = async () => {
+    "use server";
+    return testLinkedinConnection(id);
+  };
+
+  const linkedinMember = agent.linkedin_access_token
+    ? {
+        name: agent.linkedin_member_name ?? null,
+        picture: agent.linkedin_member_picture ?? null,
+        connectedAt: agent.linkedin_connected_at ?? null,
+      }
+    : null;
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -119,8 +133,9 @@ export default async function EditAgentPage({
 
       <LinkedinCard
         agentId={id}
-        connected={Boolean(agent.linkedin_access_token)}
+        member={linkedinMember}
         onDisconnect={boundDisconnectLinkedin}
+        onTest={boundTestLinkedin}
       />
 
       <ScheduleSection

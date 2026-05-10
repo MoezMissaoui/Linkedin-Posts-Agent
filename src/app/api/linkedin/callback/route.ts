@@ -9,10 +9,25 @@ import {
   STATE_COOKIE,
 } from "@/lib/linkedin";
 
-function back(origin: string, agentId: string | null, status: string) {
+type ReturnTo = "edit" | "list";
+
+function buildReturnUrl(
+  origin: string,
+  agentId: string | null,
+  status: string,
+  returnTo: ReturnTo,
+) {
+  if (returnTo === "list" && agentId) {
+    const u = new URL("/agents", origin);
+    u.searchParams.set("drawer", "linkedin");
+    u.searchParams.set("agent", agentId);
+    u.searchParams.set("linkedin", status);
+    return u;
+  }
   const path = agentId ? `/agents/${agentId}` : "/agents";
-  return NextResponse.redirect(
-    new URL(`${path}?linkedin=${encodeURIComponent(status)}`, origin),
+  return new URL(
+    `${path}?linkedin=${encodeURIComponent(status)}`,
+    origin,
   );
 }
 
@@ -30,27 +45,33 @@ export async function GET(req: NextRequest) {
 
   let agentId: string | null = null;
   let expectedNonce: string | null = null;
+  let returnTo: ReturnTo = "edit";
   if (stored) {
     try {
       const parsed = JSON.parse(stored) as {
         nonce?: string;
         agentId?: string;
+        returnTo?: ReturnTo;
       };
       agentId = parsed.agentId ?? null;
       expectedNonce = parsed.nonce ?? null;
+      returnTo = parsed.returnTo === "list" ? "list" : "edit";
     } catch {
       /* fall through */
     }
   }
 
+  const back = (status: string) =>
+    NextResponse.redirect(buildReturnUrl(origin, agentId, status, returnTo));
+
   if (oauthError) {
-    return back(origin, agentId, oauthError);
+    return back(oauthError);
   }
   if (!stored || !expectedNonce || !agentId) {
-    return back(origin, null, "expired");
+    return back("expired");
   }
   if (!code || !state || state !== expectedNonce) {
-    return back(origin, agentId, "invalid_state");
+    return back("invalid_state");
   }
 
   const supabase = await createClient();
@@ -64,37 +85,45 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await exchangeCode(code, getRedirectUri(origin));
 
-    // Fetch the LinkedIn member id (sub) so n8n can post without an extra call.
+    // Fetch the LinkedIn member identity so the UI can show the connected
+    // account (avatar + name) and n8n can post without an extra call.
     let memberId: string | null = null;
+    let memberName: string | null = null;
+    let memberPicture: string | null = null;
     try {
       const info = await getUserInfo(tokens.access_token);
       memberId = info.sub ?? null;
+      memberName = info.name ?? null;
+      memberPicture = info.picture ?? null;
     } catch (e) {
-      // Token is valid but userinfo failed — still save the token, leave member_id null.
       console.error(
         "[linkedin callback] userinfo failed",
         e instanceof Error ? e.message : e,
       );
     }
 
+    const now = new Date().toISOString();
     const { error: dbError } = await supabase
       .from("agents")
       .update({
         linkedin_access_token: tokens.access_token,
         linkedin_member_id: memberId,
-        updated_at: new Date().toISOString(),
+        linkedin_member_name: memberName,
+        linkedin_member_picture: memberPicture,
+        linkedin_connected_at: now,
+        updated_at: now,
       })
       .eq("id", agentId);
 
     if (dbError) {
       console.error("[linkedin callback] db error", dbError.message);
-      return back(origin, agentId, "db_error");
+      return back("db_error");
     }
 
-    return back(origin, agentId, "connected");
+    return back("connected");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("[linkedin callback] exchange error", msg);
-    return back(origin, agentId, "exchange_error");
+    return back("exchange_error");
   }
 }
