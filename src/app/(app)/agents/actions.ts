@@ -146,16 +146,68 @@ function buildPromptPayload(fields: ParsedFields) {
   };
 }
 
-function validate(fields: ParsedFields): AgentFormState | null {
+function validate(
+  fields: ParsedFields,
+  opts: { requireBotToken: boolean },
+): AgentFormState | null {
   const fieldErrors: Record<string, string> = {};
+
+  // Title
   if (!fields.title) fieldErrors.title = "Le titre est requis.";
-  if (fields.email && !EMAIL_RE.test(fields.email)) {
+
+  // Prompt — depends on mode
+  if (fields.prompt_mode === "assistant") {
+    if (!fields.prompt_topic) fieldErrors.prompt_topic = "Sujet requis.";
+    if (!fields.prompt_audience) {
+      fieldErrors.prompt_audience = "Audience requise.";
+    }
+    if (!fields.prompt_role) fieldErrors.prompt_role = "Rôle requis.";
+    if (!fields.prompt_hook_emoji) {
+      fieldErrors.prompt_hook_emoji = "Emoji requis.";
+    }
+    if (!fields.prompt_hook_prefix) {
+      fieldErrors.prompt_hook_prefix = "Préfixe requis.";
+    }
+    if (!fields.prompt_footer) fieldErrors.prompt_footer = "Footer requis.";
+    if (fields.prompt_has_code && !fields.prompt_code_language) {
+      fieldErrors.prompt_code_language = "Précise le langage du code.";
+    }
+  } else {
+    if (!fields.prompt_system_raw) {
+      fieldErrors.prompt_system = "Le prompt système est requis.";
+    }
+  }
+
+  // Channels
+  if (!fields.approval_channel) {
+    fieldErrors.approval_channel = "Choisis un canal.";
+  }
+  if (!fields.confirmation_channel) {
+    fieldErrors.confirmation_channel = "Choisis un canal.";
+  }
+
+  // E-mail
+  if (!fields.email) {
+    fieldErrors.email = "E-mail requis.";
+  } else if (!EMAIL_RE.test(fields.email)) {
     fieldErrors.email = "E-mail invalide.";
   }
+
+  // Telegram
+  if (!fields.telegram_chat_id) {
+    fieldErrors.telegram_chat_id = "Chat ID requis.";
+  }
+  if (!fields.telegram_start_command) {
+    fieldErrors.telegram_start_command = "Commande de démarrage requise.";
+  }
+  if (opts.requireBotToken && !fields.telegram_bot_token) {
+    fieldErrors.telegram_bot_token = "Bot token requis.";
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return {
       ok: false,
-      message: "Corrige les champs en erreur.",
+      message: "Tous les champs de l'agent sont requis.",
       fieldErrors,
     };
   }
@@ -180,7 +232,7 @@ export async function createAgent(
   formData: FormData,
 ): Promise<AgentFormState> {
   const fields = parse(formData);
-  const v = validate(fields);
+  const v = validate(fields, { requireBotToken: true });
   if (v) return v;
 
   const supabase = await createClient();
@@ -224,7 +276,9 @@ export async function updateAgent(
   if (!id) return { ok: false, message: "ID d'agent manquant." };
 
   const fields = parse(formData);
-  const v = validate(fields);
+  // In edit mode, an empty bot token means "keep the current one" — so we
+  // don't require it again here.
+  const v = validate(fields, { requireBotToken: false });
   if (v) return v;
 
   const supabase = await createClient();

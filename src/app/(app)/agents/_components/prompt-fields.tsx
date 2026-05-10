@@ -92,6 +92,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               id="prompt_topic"
               label="Sujet principal"
               hint="Le thème global ; sera utilisé dans le hook et l'instruction."
+              required
             >
               <Input
                 id="prompt_topic"
@@ -100,6 +101,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Laravel · Docker · Project Management · Finance"
                 maxLength={200}
+                required
               />
             </Field>
 
@@ -107,6 +109,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               id="prompt_audience"
               label="Audience cible"
               hint="À qui s'adressent les posts ?"
+              required
             >
               <Input
                 id="prompt_audience"
@@ -115,6 +118,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
                 onChange={(e) => setAudience(e.target.value)}
                 placeholder="senior developers · DevOps · PMs"
                 maxLength={200}
+                required
               />
             </Field>
           </div>
@@ -123,6 +127,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
             id="prompt_role"
             label="Rôle de l'agent"
             hint="Décris l'expertise. Utilisé en tête du prompt."
+            required
           >
             <Textarea
               id="prompt_role"
@@ -133,6 +138,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               rows={3}
               className="font-sans"
               maxLength={1000}
+              required
             />
           </Field>
 
@@ -141,6 +147,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               id="prompt_hook_emoji"
               label="Emoji du hook"
               hint="Le 1er caractère du post."
+              required
             >
               <Input
                 id="prompt_hook_emoji"
@@ -149,6 +156,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
                 onChange={(e) => setHookEmoji(e.target.value)}
                 placeholder="💡"
                 maxLength={16}
+                required
               />
             </Field>
 
@@ -156,6 +164,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               id="prompt_hook_prefix"
               label="Préfixe du hook"
               hint='Ex. "Laravel Tip" → produit "💡 Laravel Tip: …"'
+              required
             >
               <Input
                 id="prompt_hook_prefix"
@@ -164,6 +173,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
                 onChange={(e) => setHookPrefix(e.target.value)}
                 placeholder="Laravel Tip · Docker Tip · PMP Insight"
                 maxLength={200}
+                required
               />
             </Field>
           </div>
@@ -172,6 +182,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
             id="prompt_footer"
             label="Footer / signature"
             hint="Toujours ajouté à la fin de chaque post (CTA, GitHub, hashtags…)."
+            required
           >
             <Textarea
               id="prompt_footer"
@@ -181,6 +192,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               rows={5}
               className="font-sans"
               maxLength={2000}
+              required
             />
           </Field>
 
@@ -207,6 +219,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
               id="prompt_code_language"
               label="Langage du code"
               hint="Servira à instruire le LLM (PHP, YAML, Bash, Python, JavaScript…)."
+              required
             >
               <Input
                 id="prompt_code_language"
@@ -215,6 +228,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
                 onChange={(e) => setCodeLanguage(e.target.value)}
                 placeholder="PHP · YAML · Bash · TypeScript"
                 maxLength={200}
+                required
               />
             </Field>
           ) : null}
@@ -250,6 +264,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
           id="prompt_system"
           label="Prompt système (mode avancé)"
           hint="Édite directement le prompt envoyé au LLM. À tes risques — un format JSON cassé fera planter le workflow n8n."
+          required
         >
           <Textarea
             id="prompt_system"
@@ -259,6 +274,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
             rows={14}
             placeholder="You are an expert..."
             maxLength={8000}
+            required
           />
         </Field>
       )}
@@ -331,16 +347,21 @@ function Field({
   id,
   label,
   hint,
+  required,
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+      </Label>
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>

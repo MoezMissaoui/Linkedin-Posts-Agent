@@ -24,7 +24,7 @@ import type { AgentFormState } from "../actions";
 import { PromptFields } from "./prompt-fields";
 
 const CHANNEL_OPTIONS = [
-  { value: "", label: "Aucun" },
+  { value: "", label: "Sélectionne un canal…" },
   { value: "telegram", label: "Telegram" },
   { value: "email", label: "E-mail" },
 ] as const;
@@ -142,22 +142,28 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
             id="approval_channel"
             label="Canal d'approbation"
             hint="Avant publication"
+            error={state?.fieldErrors?.approval_channel}
+            required
           >
             <SelectChannel
               id="approval_channel"
               name="approval_channel"
               defaultValue={initial?.approval_channel ?? ""}
+              required
             />
           </Field>
           <Field
             id="confirmation_channel"
             label="Canal de confirmation"
             hint="Après publication"
+            error={state?.fieldErrors?.confirmation_channel}
+            required
           >
             <SelectChannel
               id="confirmation_channel"
               name="confirmation_channel"
               defaultValue={initial?.confirmation_channel ?? ""}
+              required
             />
           </Field>
         </CardContent>
@@ -172,7 +178,12 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Field id="email" label="E-mail" error={state?.fieldErrors?.email}>
+          <Field
+            id="email"
+            label="E-mail"
+            error={state?.fieldErrors?.email}
+            required
+          >
             <Input
               id="email"
               name="email"
@@ -180,6 +191,7 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
               defaultValue={initial?.email ?? ""}
               maxLength={200}
               placeholder="vous@exemple.com"
+              required
             />
           </Field>
         </CardContent>
@@ -200,21 +212,31 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
             mode={mode}
             present={telegramTokenPresent}
             clearName="telegram_clear"
+            required={mode === "create"}
+            error={state?.fieldErrors?.telegram_bot_token}
           />
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field id="telegram_chat_id" label="Chat ID">
+            <Field
+              id="telegram_chat_id"
+              label="Chat ID"
+              error={state?.fieldErrors?.telegram_chat_id}
+              required
+            >
               <Input
                 id="telegram_chat_id"
                 name="telegram_chat_id"
                 defaultValue={initial?.telegram_chat_id ?? ""}
                 maxLength={200}
                 placeholder="614773010"
+                required
               />
             </Field>
             <Field
               id="telegram_start_command"
               label="Commande de démarrage"
               hint="Ex. : GO"
+              error={state?.fieldErrors?.telegram_start_command}
+              required
             >
               <Input
                 id="telegram_start_command"
@@ -222,6 +244,7 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
                 defaultValue={initial?.telegram_start_command ?? ""}
                 maxLength={200}
                 placeholder="GO"
+                required
               />
             </Field>
           </div>
@@ -285,20 +308,27 @@ function SelectChannel({
   id,
   name,
   defaultValue,
+  required,
 }: {
   id: string;
   name: string;
   defaultValue: string;
+  required?: boolean;
 }) {
   return (
     <select
       id={id}
       name={name}
       defaultValue={defaultValue}
+      required={required}
       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {CHANNEL_OPTIONS.map((opt) => (
-        <option key={opt.value || "none"} value={opt.value}>
+        <option
+          key={opt.value || "none"}
+          value={opt.value}
+          disabled={required && opt.value === ""}
+        >
           {opt.label}
         </option>
       ))}
@@ -338,12 +368,16 @@ function SecretField({
   mode,
   present,
   clearName,
+  required,
+  error,
 }: {
   id: string;
   label: string;
   mode: Mode;
   present: boolean;
   clearName: string;
+  required?: boolean;
+  error?: string;
 }) {
   const [show, setShow] = React.useState(false);
   const [clear, setClear] = React.useState(false);
@@ -357,7 +391,10 @@ function SecretField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+      </Label>
       <div className="relative">
         <Input
           id={id}
@@ -368,6 +405,7 @@ function SecretField({
           maxLength={1000}
           placeholder={placeholder}
           disabled={clear}
+          required={required && !clear}
           className={cn("pr-10", clear ? "opacity-50" : "")}
         />
         <button
@@ -391,6 +429,7 @@ function SecretField({
           Effacer le token actuel
         </label>
       ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
