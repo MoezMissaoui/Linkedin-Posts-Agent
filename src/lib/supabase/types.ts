@@ -8,7 +8,6 @@ export type Database = {
           id: string;
           user_id: string;
           title: string | null;
-          post_subject: string | null;
           prompt_system: string | null;
           email: string | null;
           telegram_chat_id: string | null;
@@ -40,7 +39,6 @@ export type Database = {
           id?: string;
           user_id: string;
           title?: string | null;
-          post_subject?: string | null;
           prompt_system?: string | null;
           email?: string | null;
           telegram_chat_id?: string | null;
