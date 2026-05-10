@@ -2,23 +2,39 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Menu, MoreVertical, User as UserIcon, X } from "lucide-react";
+import {
+  LogOut,
+  Menu,
+  MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User as UserIcon,
+  X,
+} from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/auth/actions";
+import { SIDEBAR_COOKIE } from "@/lib/sidebar";
 import { SidebarNav } from "./sidebar-nav";
 
 type Props = {
   email: string;
   displayName: string;
+  defaultCollapsed?: boolean;
   children: React.ReactNode;
 };
 
-export function AppShell({ email, displayName, children }: Props) {
+export function AppShell({
+  email,
+  displayName,
+  defaultCollapsed = false,
+  children,
+}: Props) {
   const [open, setOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
 
   // Close drawer on Escape
   React.useEffect(() => {
@@ -30,11 +46,26 @@ export function AppShell({ email, displayName, children }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+  };
+
   return (
     <div className="flex min-h-svh">
-      {/* Desktop sidebar — sticky to viewport */}
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col self-start border-r border-border/60 bg-background md:flex">
-        <SidebarBody email={email} displayName={displayName} />
+      {/* Desktop sidebar — sticky to viewport, collapsible */}
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-svh shrink-0 flex-col self-start border-r border-border/60 bg-background transition-[width] duration-200 ease-out md:flex",
+          collapsed ? "w-16" : "w-64",
+        )}
+      >
+        <SidebarBody
+          email={email}
+          displayName={displayName}
+          collapsed={collapsed}
+        />
       </aside>
 
       {/* Mobile drawer */}
@@ -92,6 +123,22 @@ export function AppShell({ email, displayName, children }: Props) {
           >
             <Menu className="size-5" />
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="hidden md:inline-flex"
+            aria-label={
+              collapsed ? "Déployer la sidebar" : "Réduire la sidebar"
+            }
+            onClick={toggleCollapsed}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
+          </Button>
           <div className="md:hidden">
             <Logo size="sm" />
           </div>
@@ -112,11 +159,13 @@ function SidebarBody({
   displayName,
   onNavigate,
   closeButton,
+  collapsed = false,
 }: {
   email: string;
   displayName: string;
   onNavigate?: () => void;
   closeButton?: React.ReactNode;
+  collapsed?: boolean;
 }) {
   const initials =
     (displayName || email || "?")
@@ -128,26 +177,49 @@ function SidebarBody({
 
   return (
     <>
-      <div className="flex h-14 items-center justify-between gap-2 border-b border-border/60 px-5">
-        <Link href="/dashboard" onClick={onNavigate}>
-          <Logo size="sm" />
+      <div
+        className={cn(
+          "flex h-14 items-center gap-2 border-b border-border/60",
+          collapsed ? "justify-center px-2" : "justify-between px-5",
+        )}
+      >
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          aria-label="Postilys"
+          className={collapsed ? "inline-flex" : undefined}
+        >
+          <Logo size="sm" showWordmark={!collapsed} />
         </Link>
-        {closeButton ?? null}
+        {!collapsed && (closeButton ?? null)}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-          Navigation
-        </p>
-        <SidebarNav onNavigate={onNavigate} />
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto py-4",
+          collapsed ? "px-2" : "px-3",
+        )}
+      >
+        {!collapsed ? (
+          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Navigation
+          </p>
+        ) : null}
+        <SidebarNav onNavigate={onNavigate} collapsed={collapsed} />
       </div>
 
-      <div className="border-t border-border/60 p-3">
+      <div
+        className={cn(
+          "border-t border-border/60",
+          collapsed ? "p-2" : "p-3",
+        )}
+      >
         <UserMenu
           email={email}
           displayName={displayName}
           initials={initials}
           onNavigate={onNavigate}
+          collapsed={collapsed}
         />
       </div>
     </>
@@ -159,11 +231,13 @@ function UserMenu({
   displayName,
   initials,
   onNavigate,
+  collapsed = false,
 }: {
   email: string;
   displayName: string;
   initials: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -196,37 +270,59 @@ function UserMenu({
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex items-center gap-2 rounded-md p-2">
-        <div
-          className="grid size-9 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
-          aria-hidden
-        >
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {displayName || "Utilisateur"}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{email}</p>
-        </div>
-        <Button
+      {collapsed ? (
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-label="Ouvrir le menu utilisateur"
+          aria-label={displayName || email || "Menu utilisateur"}
+          title={displayName || email}
           onClick={() => setOpen((o) => !o)}
+          className="grid size-10 w-full place-items-center rounded-md transition-colors hover:bg-accent"
         >
-          <MoreVertical className="size-4" />
-        </Button>
-      </div>
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
+            aria-hidden
+          >
+            {initials}
+          </span>
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 rounded-md p-2">
+          <div
+            className="grid size-9 shrink-0 place-items-center rounded-full brand-gradient text-sm font-semibold text-white"
+            aria-hidden
+          >
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {displayName || "Utilisateur"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{email}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label="Ouvrir le menu utilisateur"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <MoreVertical className="size-4" />
+          </Button>
+        </div>
+      )}
 
       {open ? (
         <div
           role="menu"
-          className="absolute bottom-full right-0 z-50 mb-2 w-52 overflow-hidden rounded-md border border-border/60 bg-popover p-1 shadow-lg"
+          className={cn(
+            "absolute bottom-full z-50 mb-2 w-52 overflow-hidden rounded-md border border-border/60 bg-popover p-1 shadow-lg",
+            collapsed ? "left-0" : "right-0",
+          )}
         >
           <Link
             href="/profile"
