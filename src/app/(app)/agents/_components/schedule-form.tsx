@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Clock,
   Globe,
+  Info,
   Loader2,
   Pencil,
   Plus,
@@ -60,6 +61,104 @@ export type ScheduleConfigRow = {
   custom_cron: string | null;
   timezone: string | null;
 };
+
+type CronParts = [string, string, string, string, string];
+
+function splitCron(value: string | null | undefined): CronParts {
+  const parts = (value ?? "").trim().split(/\s+/);
+  return [
+    parts[0] || "*",
+    parts[1] || "*",
+    parts[2] || "*",
+    parts[3] || "*",
+    parts[4] || "*",
+  ];
+}
+
+function joinCron(parts: CronParts): string {
+  return parts.map((p) => (p.trim() === "" ? "*" : p.trim())).join(" ");
+}
+
+const CRON_FIELDS: {
+  label: string;
+  min: number;
+  max: number;
+  range: string;
+  placeholder: string;
+}[] = [
+  { label: "Minute", min: 0, max: 59, range: "0–59", placeholder: "*" },
+  { label: "Heure", min: 0, max: 23, range: "0–23", placeholder: "*" },
+  { label: "Jour du mois", min: 1, max: 31, range: "1–31", placeholder: "*" },
+  { label: "Mois", min: 1, max: 12, range: "1–12", placeholder: "*" },
+  {
+    label: "Jour de semaine",
+    min: 0,
+    max: 6,
+    range: "0–6 (0=dim)",
+    placeholder: "*",
+  },
+];
+
+/**
+ * Validate a single cron field expression. Accepts:
+ *   *               (any)
+ *   N               (single number, must be in [min, max])
+ *   A-B             (range, both in [min, max], A ≤ B)
+ *   *\/N            (every N, N ≥ 1)
+ *   A-B\/N          (range with step)
+ *   A,B,C           (list — each part validated recursively)
+ */
+function validateCronField(
+  value: string,
+  min: number,
+  max: number,
+): { ok: true } | { ok: false; message: string } {
+  const v = value.trim();
+  if (v === "") return { ok: false, message: "Vide" };
+  if (v === "*") return { ok: true };
+
+  // List: A,B,C — recurse on each part
+  if (v.includes(",")) {
+    for (const part of v.split(",")) {
+      const r = validateCronField(part, min, max);
+      if (!r.ok) return r;
+    }
+    return { ok: true };
+  }
+
+  // Step: */N or A-B/N
+  if (v.includes("/")) {
+    const [base, stepStr] = v.split("/");
+    const step = Number(stepStr);
+    if (!Number.isInteger(step) || step < 1) {
+      return { ok: false, message: "Pas /N invalide" };
+    }
+    return validateCronField(base, min, max);
+  }
+
+  // Range: A-B
+  if (v.includes("-")) {
+    const [aStr, bStr] = v.split("-");
+    const a = Number(aStr);
+    const b = Number(bStr);
+    if (!Number.isInteger(a) || !Number.isInteger(b)) {
+      return { ok: false, message: "Range invalide" };
+    }
+    if (a < min || a > max || b < min || b > max) {
+      return { ok: false, message: `Hors plage ${min}–${max}` };
+    }
+    if (a > b) return { ok: false, message: "Min > max" };
+    return { ok: true };
+  }
+
+  // Single integer
+  const n = Number(v);
+  if (!Number.isInteger(n)) return { ok: false, message: "Pas un nombre" };
+  if (n < min || n > max) {
+    return { ok: false, message: `Hors plage ${min}–${max}` };
+  }
+  return { ok: true };
+}
 
 type AddAction = (
   state: AgentFormState | undefined,
@@ -320,8 +419,21 @@ function ScheduleEditForm({
   const [state, formAction] = useActionState(onSubmitAction, {
     ok: false,
   } as AgentFormState);
-  const [cron, setCron] = React.useState(initialCron);
+  const [parts, setParts] = React.useState<CronParts>(() =>
+    splitCron(initialCron),
+  );
+  const cron = joinCron(parts);
+  const setPart = (i: number, value: string) =>
+    setParts((prev) => {
+      const next = [...prev] as CronParts;
+      next[i] = value;
+      return next;
+    });
   const [timezone, setTimezone] = React.useState(initialTimezone || "UTC");
+
+  const hasCronErrors = parts.some(
+    (p, i) => !validateCronField(p, CRON_FIELDS[i].min, CRON_FIELDS[i].max).ok,
+  );
 
   React.useEffect(() => {
     if (state?.ok && state.message) {
@@ -339,40 +451,89 @@ function ScheduleEditForm({
       action={formAction}
       className="flex flex-col gap-3 rounded-md border border-primary/30 bg-primary/5 p-3"
     >
+      {/* Hidden field — the actual cron string sent to the server. */}
+      <input type="hidden" name="custom_cron" value={cron} />
+
+      {/* Info banner */}
+      <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+        <Info className="size-3.5 shrink-0 mt-0.5 text-primary" />
+        <div className="flex flex-col gap-1">
+          <p className="text-foreground/90">
+            Choisis quand l&apos;agent doit générer ses posts. Chaque case
+            correspond à un champ cron.
+          </p>
+          <p className="text-muted-foreground">
+            Mets <code className="font-mono">*</code> pour « n&apos;importe
+            quelle valeur ». Ex. : <code className="font-mono">30</code> en
+            Minute + <code className="font-mono">10</code> en Heure + le reste
+            en <code className="font-mono">*</code> = tous les jours à 10h30.
+          </p>
+        </div>
+      </div>
+
+      {/* 5 cron parts */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`cron-${mode}`}>Expression cron</Label>
-        <div className="relative">
-          <Clock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id={`cron-${mode}`}
-            name="custom_cron"
-            value={cron}
-            onChange={(e) => setCron(e.target.value)}
-            placeholder="30 10 * * *"
-            className={cn(
-              "pl-9 font-mono",
-              state?.fieldErrors?.custom_cron
-                ? "border-destructive focus-visible:ring-destructive"
-                : "",
-            )}
-            required
-          />
+        <Label>Quand publier ?</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {CRON_FIELDS.map((f, i) => {
+            const fieldError = validateCronField(parts[i], f.min, f.max);
+            const isInvalid = !fieldError.ok;
+            return (
+              <div key={f.label} className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {f.label}
+                </span>
+                <Input
+                  value={parts[i]}
+                  onChange={(e) => setPart(i, e.target.value)}
+                  placeholder={f.placeholder}
+                  className={cn(
+                    "h-9 text-center font-mono",
+                    isInvalid
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : "",
+                  )}
+                  aria-invalid={isInvalid || undefined}
+                  inputMode="text"
+                  spellCheck={false}
+                  autoComplete="off"
+                  required
+                />
+                <span
+                  className={cn(
+                    "text-[10px]",
+                    isInvalid
+                      ? "text-destructive"
+                      : "text-muted-foreground/80",
+                  )}
+                >
+                  {isInvalid ? fieldError.message : f.range}
+                </span>
+              </div>
+            );
+          })}
         </div>
         {state?.fieldErrors?.custom_cron ? (
           <p className="text-xs text-destructive">
             {state.fieldErrors.custom_cron}
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            Format : <code className="font-mono">minute heure jour mois jour-semaine</code>
+          <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="size-3" />
+            Cron généré :{" "}
+            <code className="font-mono text-foreground/80">{cron}</code>
           </p>
         )}
-        <div className="flex flex-wrap gap-1.5">
+
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          <span className="text-[11px] text-muted-foreground self-center">
+            Presets :
+          </span>
           {PRESETS.map((p) => (
             <button
               key={p.cron}
               type="button"
-              onClick={() => setCron(p.cron)}
+              onClick={() => setParts(splitCron(p.cron))}
               className={cn(
                 "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
                 cron === p.cron
@@ -429,17 +590,23 @@ function ScheduleEditForm({
             <X className="size-3.5" />
             Annuler
           </Button>
-          <SubmitButton mode={mode} />
+          <SubmitButton mode={mode} disabled={hasCronErrors} />
         </div>
       </div>
     </form>
   );
 }
 
-function SubmitButton({ mode }: { mode: "add" | "edit" }) {
+function SubmitButton({
+  mode,
+  disabled,
+}: {
+  mode: "add" | "edit";
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="sm" disabled={pending}>
+    <Button type="submit" size="sm" disabled={pending || disabled}>
       {pending ? (
         <Loader2 className="size-4 animate-spin" />
       ) : (
