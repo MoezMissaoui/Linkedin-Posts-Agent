@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Menu, User, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/app/auth/actions";
 import { SidebarNav } from "./sidebar-nav";
@@ -97,17 +97,6 @@ export function AppShell({ email, displayName, children }: Props) {
           </div>
           <div className="flex-1" />
           <ThemeToggle />
-          <Link
-            href="/profile"
-            className={buttonVariants({
-              variant: "ghost",
-              size: "icon",
-              className: "md:hidden",
-            })}
-            aria-label="Profil"
-          >
-            <User className="size-4" />
-          </Link>
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
