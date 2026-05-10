@@ -13,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { AgentActiveToggle } from "./_components/agent-active-toggle";
 import { AgentDrawer, type AgentDrawerData } from "./_components/agent-drawer";
 
 const PAGE_SIZE = 6;
@@ -46,7 +47,7 @@ export default async function AgentsPage({
   } = await supabase
     .from("agents")
     .select(
-      `id, title, schedule, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at,
+      `id, title, schedule, active, enable_post_picture, approval_channel, confirmation_channel, updated_at, created_at,
        linkedin_access_token, linkedin_member_name, linkedin_member_picture, linkedin_connected_at,
        agent_schedule_config (id, custom_cron, timezone, created_at)`,
       { count: "exact" },
@@ -60,18 +61,31 @@ export default async function AgentsPage({
 
   // Strip the access token before sending to the client. Only a derived boolean leaves the server.
   type AgentRow = NonNullable<typeof agentsRaw>[number];
-  const agents: AgentCardRow[] = (agentsRaw ?? []).map((a: AgentRow) => ({
-    id: a.id,
-    title: a.title,
-    schedule: a.schedule,
-    enable_post_picture: a.enable_post_picture,
-    approval_channel: a.approval_channel,
-    confirmation_channel: a.confirmation_channel,
-    updated_at: a.updated_at,
-    created_at: a.created_at,
-    linkedin_connected: Boolean(a.linkedin_access_token),
-    schedule_count: (a.agent_schedule_config ?? []).length,
-  }));
+  const agents: AgentCardRow[] = (agentsRaw ?? []).map((a: AgentRow) => {
+    const linkedinConnected = Boolean(a.linkedin_access_token);
+    const scheduleCount = (a.agent_schedule_config ?? []).length;
+    const canActivate = linkedinConnected && scheduleCount > 0;
+    const activateReason = !linkedinConnected
+      ? "Connecte LinkedIn d'abord."
+      : scheduleCount === 0
+        ? "Ajoute au moins un planning d'abord."
+        : "";
+    return {
+      id: a.id,
+      title: a.title,
+      schedule: a.schedule,
+      enable_post_picture: a.enable_post_picture,
+      approval_channel: a.approval_channel,
+      confirmation_channel: a.confirmation_channel,
+      updated_at: a.updated_at,
+      created_at: a.created_at,
+      linkedin_connected: linkedinConnected,
+      schedule_count: scheduleCount,
+      active: a.active,
+      can_activate: canActivate,
+      activate_reason: activateReason,
+    };
+  });
 
   const drawerAgents: AgentDrawerData[] = (agentsRaw ?? []).map(
     (a: AgentRow) => ({
@@ -153,6 +167,9 @@ type AgentCardRow = {
   created_at: string;
   linkedin_connected: boolean;
   schedule_count: number;
+  active: boolean;
+  can_activate: boolean;
+  activate_reason: string;
 };
 
 function AgentCard({ agent }: { agent: AgentCardRow }) {
@@ -161,22 +178,30 @@ function AgentCard({ agent }: { agent: AgentCardRow }) {
   return (
     <Card className="flex h-full flex-col overflow-hidden transition-colors hover:border-foreground/30">
       <CardContent className="flex flex-1 flex-col gap-4 p-5">
-        <Link
-          href={`/agents/${agent.id}`}
-          className="group flex items-start gap-3 focus:outline-none"
-        >
-          <div className="grid size-10 place-items-center rounded-lg brand-gradient text-white">
-            <Bot className="size-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold group-hover:underline">
-              {agent.title || "Agent sans titre"}
-            </h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Mis à jour le {dateFormatter.format(new Date(updated))}
-            </p>
-          </div>
-        </Link>
+        <div className="flex items-start gap-3">
+          <Link
+            href={`/agents/${agent.id}`}
+            className="group flex min-w-0 flex-1 items-start gap-3 focus:outline-none"
+          >
+            <div className="grid size-10 place-items-center rounded-lg brand-gradient text-white">
+              <Bot className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-base font-semibold group-hover:underline">
+                {agent.title || "Agent sans titre"}
+              </h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Mis à jour le {dateFormatter.format(new Date(updated))}
+              </p>
+            </div>
+          </Link>
+          <AgentActiveToggle
+            agentId={agent.id}
+            active={agent.active}
+            canActivate={agent.can_activate}
+            reason={agent.activate_reason}
+          />
+        </div>
 
         <div className="flex flex-wrap gap-1.5">
           {agent.linkedin_connected ? (

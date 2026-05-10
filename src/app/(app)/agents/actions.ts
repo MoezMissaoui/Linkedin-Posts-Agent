@@ -376,6 +376,71 @@ export async function deleteScheduleConfig(
   revalidatePath("/dashboard");
 }
 
+export type ToggleResult = {
+  ok: boolean;
+  message?: string;
+};
+
+export async function toggleAgentActive(
+  agentId: string,
+  active: boolean,
+): Promise<ToggleResult> {
+  if (!agentId) return { ok: false, message: "ID d'agent manquant." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Session expirée." };
+
+  // Pre-validate when activating so the user gets a precise reason.
+  // The DB trigger enforces the same invariant — this is just for nicer UX.
+  if (active) {
+    const [{ data: agent }, { count }] = await Promise.all([
+      supabase
+        .from("agents")
+        .select("linkedin_access_token")
+        .eq("id", agentId)
+        .maybeSingle(),
+      supabase
+        .from("agent_schedule_config")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", agentId),
+    ]);
+
+    if (!agent) {
+      return { ok: false, message: "Agent introuvable." };
+    }
+    if (!agent.linkedin_access_token) {
+      return {
+        ok: false,
+        message: "Connecte LinkedIn d'abord pour activer cet agent.",
+      };
+    }
+    if ((count ?? 0) === 0) {
+      return {
+        ok: false,
+        message: "Ajoute au moins un planning pour activer cet agent.",
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("agents")
+    .update({ active, updated_at: new Date().toISOString() })
+    .eq("id", agentId);
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/agents");
+  revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/dashboard");
+  return {
+    ok: true,
+    message: active ? "Agent activé." : "Agent désactivé.",
+  };
+}
+
 export async function disconnectLinkedin(agentId: string): Promise<void> {
   if (!agentId) return;
 
