@@ -143,7 +143,9 @@ export function AppShell({
             <Logo size="sm" />
           </div>
           <div className="flex-1" />
+          {/* Dark/light mode toggle temporairement désactivé — décommente pour réactiver.
           <ThemeToggle />
+          */}
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
