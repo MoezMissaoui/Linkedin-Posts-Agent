@@ -23,7 +23,9 @@ export default function AuthLayout({
         <Link href="/" className="group">
           <Logo size="md" />
         </Link>
+        {/* Dark/light mode toggle temporairement désactivé — décommente pour réactiver.
         <ThemeToggle />
+        */}
       </header>
 
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-12">
