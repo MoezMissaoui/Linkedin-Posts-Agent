@@ -104,6 +104,36 @@ export async function signOut() {
   redirect("/auth/login");
 }
 
+export async function resendSignupConfirmation(
+  _prev: AuthState | undefined,
+  formData: FormData,
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!EMAIL_RE.test(email)) {
+    return { ok: false, message: "Adresse e-mail invalide." };
+  }
+
+  const origin = await getOrigin();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
+    },
+  });
+
+  if (error) {
+    return { ok: false, message: humanizeAuthError(error.message) };
+  }
+
+  return {
+    ok: true,
+    message: "E-mail de confirmation renvoyé. Vérifie ta boîte mail.",
+  };
+}
+
 export async function requestPasswordReset(
   _prev: AuthState | undefined,
   formData: FormData,

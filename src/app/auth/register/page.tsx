@@ -4,7 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -17,13 +26,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signUp, type AuthState } from "../actions";
+import {
+  resendSignupConfirmation,
+  signUp,
+  type AuthState,
+} from "../actions";
 
 const initial: AuthState = { ok: false };
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function RegisterPage() {
   const [state, formAction] = useActionState(signUp, initial);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [email, setEmail] = React.useState("");
 
   if (state?.ok && state.message) {
     return (
@@ -35,6 +50,9 @@ export default function RegisterPage() {
           <CardTitle>Vérifie ta boîte mail</CardTitle>
           <CardDescription>{state.message}</CardDescription>
         </CardHeader>
+        <CardContent>
+          <ResendConfirmationButton email={email} />
+        </CardContent>
         <CardFooter className="justify-center">
           <Link
             href="/auth/login"
@@ -74,6 +92,8 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 placeholder="vous@exemple.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="pl-9"
               />
             </div>
@@ -151,6 +171,55 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
     <Button type="submit" disabled={pending} className="mt-2 w-full">
       {pending ? <Loader2 className="size-4 animate-spin" /> : null}
       {children}
+    </Button>
+  );
+}
+
+function ResendConfirmationButton({ email }: { email: string }) {
+  const [cooldown, setCooldown] = React.useState(RESEND_COOLDOWN_SECONDS);
+  const [pending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(
+      () => setCooldown((c) => Math.max(0, c - 1)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  const handle = () => {
+    if (!email || cooldown > 0) return;
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("email", email);
+      const result = await resendSignupConfirmation(undefined, fd);
+      if (result.ok) {
+        toast.success("E-mail de confirmation renvoyé.");
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+      } else {
+        toast.error(result.message ?? "Erreur lors du renvoi.");
+      }
+    });
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={handle}
+      disabled={pending || cooldown > 0 || !email}
+      className="w-full"
+    >
+      {pending ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <RefreshCw className="size-3.5" />
+      )}
+      {cooldown > 0
+        ? `Renvoyer l'e-mail dans ${cooldown}s`
+        : "Renvoyer l'e-mail de confirmation"}
     </Button>
   );
 }
