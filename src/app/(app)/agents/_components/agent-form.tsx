@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, Eye, EyeOff, Loader2, Save, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +38,11 @@ type Props = {
     formData: FormData,
   ) => Promise<AgentFormState>;
   initial?: Partial<Agent>;
-  onDelete?: () => Promise<void>;
 };
 
 const initialState: AgentFormState = { ok: false };
 
-export function AgentForm({ mode, action, initial, onDelete }: Props) {
+export function AgentForm({ mode, action, initial }: Props) {
   const [state, formAction] = useActionState(action, initialState);
   const router = useRouter();
 
@@ -258,9 +257,6 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
           Annuler
         </Button>
         <div className="flex items-center gap-2">
-          {mode === "edit" && onDelete ? (
-            <DeleteButton onConfirm={onDelete} />
-          ) : null}
           <SubmitButton mode={mode} />
         </div>
       </div>
@@ -445,49 +441,5 @@ function SubmitButton({ mode }: { mode: Mode }) {
       )}
       {mode === "create" ? "Créer l'agent" : "Enregistrer"}
     </Button>
-  );
-}
-
-function DeleteButton({ onConfirm }: { onConfirm: () => Promise<void> }) {
-  const [confirming, setConfirming] = React.useState(false);
-  const [pending, startTransition] = React.useTransition();
-
-  if (!confirming) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setConfirming(true)}
-        className="border-destructive/40 text-destructive hover:bg-destructive/10"
-      >
-        <Trash2 className="size-4" />
-        Supprimer
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-sm animate-slide-in-right">
-      <AlertTriangle className="size-4 text-destructive" />
-      <span className="text-destructive">Confirmer ?</span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setConfirming(false)}
-      >
-        Annuler
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        disabled={pending}
-        onClick={() => startTransition(() => onConfirm())}
-        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-      >
-        {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-        Oui, supprimer
-      </Button>
-    </div>
   );
 }

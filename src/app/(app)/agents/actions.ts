@@ -669,5 +669,4 @@ export async function deleteAgent(id: string): Promise<void> {
 
   revalidatePath("/agents");
   revalidatePath("/dashboard");
-  redirect("/agents");
 }

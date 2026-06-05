@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AgentActiveToggle } from "./_components/agent-active-toggle";
 import { AgentDrawer, type AgentDrawerData } from "./_components/agent-drawer";
+import { AgentCardActions } from "./_components/agent-card-actions";
 
 const PAGE_SIZE = 6;
 
@@ -238,6 +239,7 @@ function AgentCard({ agent }: { agent: AgentCardRow }) {
             label="Planning"
             tone={agent.schedule_count > 0 ? "active" : "default"}
           />
+          <AgentCardActions agentId={agent.id} title={agent.title} />
         </div>
       </CardContent>
     </Card>

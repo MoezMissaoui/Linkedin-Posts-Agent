@@ -4,11 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { AgentForm } from "../_components/agent-form";
-import {
-  deleteAgent,
-  updateAgent,
-  type AgentFormState,
-} from "../actions";
+import { updateAgent, type AgentFormState } from "../actions";
 
 export default async function EditAgentPage({
   params,
@@ -40,11 +36,6 @@ export default async function EditAgentPage({
     return updateAgent(id, state, formData);
   };
 
-  const boundDelete = async () => {
-    "use server";
-    await deleteAgent(id);
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -69,7 +60,6 @@ export default async function EditAgentPage({
         mode="edit"
         action={boundUpdate}
         initial={agent}
-        onDelete={boundDelete}
       />
     </div>
   );
