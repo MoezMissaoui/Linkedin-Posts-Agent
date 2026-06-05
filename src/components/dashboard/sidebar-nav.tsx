@@ -18,9 +18,9 @@ type NavItem = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/posts", label: "Posts", icon: Newspaper },
+  { href: "/posts", label: "Publications", icon: Newspaper },
 ];
 
 export function SidebarNav({

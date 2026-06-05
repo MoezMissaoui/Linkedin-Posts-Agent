@@ -98,12 +98,12 @@ export default async function PostsPage({
       <header>
         <p className="text-sm text-muted-foreground">Publications</p>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Posts LinkedIn
+          Publications LinkedIn
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {total === 0
-            ? "Aucun post pour le moment."
-            : `${total} post${total > 1 ? "s" : ""} ${selectedAgent ? "pour cet agent" : "tous agents confondus"}.`}
+            ? "Aucune publication pour le moment."
+            : `${total} publication${total > 1 ? "s" : ""} ${selectedAgent ? "pour cet agent" : "tous agents confondus"}.`}
         </p>
       </header>
 
@@ -245,11 +245,11 @@ function EmptyState({ hasAgents }: { hasAgents: boolean }) {
           <Inbox className="size-6" />
         </div>
         <div className="flex flex-col gap-1">
-          <p className="font-medium">Aucun post à afficher</p>
+          <p className="font-medium">Aucune publication à afficher</p>
           <p className="text-sm text-muted-foreground">
             {hasAgents
               ? "Tes agents n'ont rien publié pour l'instant."
-              : "Crée un agent pour commencer à générer des posts."}
+              : "Crée un agent pour commencer à générer des publications."}
           </p>
         </div>
       </CardContent>

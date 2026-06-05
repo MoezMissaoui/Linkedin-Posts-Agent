@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Postilys — AI-driven LinkedIn posting agents",
+  title: "Postilys — agents IA de publication LinkedIn",
   description:
-    "Postilys lets you orchestrate AI agents that draft, schedule and publish LinkedIn posts on autopilot.",
+    "Postilys orchestre des agents IA qui rédigent, planifient et publient vos publications LinkedIn en pilote automatique.",
 };
 
 export default async function RootLayout({

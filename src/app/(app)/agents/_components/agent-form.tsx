@@ -128,7 +128,7 @@ export function AgentForm({ mode, action, initial, onDelete }: Props) {
           <ToggleRow
             id="enable_post_picture"
             name="enable_post_picture"
-            label="Générer une image avec chaque post"
+            label="Générer une image avec chaque publication"
             hint="Si activé, l'agent crée un visuel à partir du raw_code"
             defaultChecked={initial?.enable_post_picture ?? false}
           />

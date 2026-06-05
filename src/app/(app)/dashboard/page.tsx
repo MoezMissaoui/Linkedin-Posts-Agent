@@ -112,7 +112,7 @@ export default async function DashboardPage() {
         />
         <Kpi
           icon={<Newspaper className="size-4" />}
-          label="Posts totaux"
+          label="Publications totales"
           value={totalPosts ?? 0}
         />
         <Kpi
@@ -135,8 +135,8 @@ export default async function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Posts récents</CardTitle>
-              <CardDescription>5 derniers, tous agents confondus</CardDescription>
+              <CardTitle className="text-lg">Publications récentes</CardTitle>
+              <CardDescription>5 dernières, tous agents confondus</CardDescription>
             </div>
             <Link
               href="/posts"
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
               recentPosts.map((p) => <PostRow key={p.id} post={p} />)
             ) : (
               <p className="rounded-md border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                Aucun post pour le moment.
+                Aucune publication pour le moment.
               </p>
             )}
           </CardContent>

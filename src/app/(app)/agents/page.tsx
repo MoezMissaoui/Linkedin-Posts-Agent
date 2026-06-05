@@ -306,7 +306,7 @@ function EmptyState() {
             Tu n&apos;as pas encore d&apos;agent
           </p>
           <p className="text-sm text-muted-foreground">
-            Crée un premier agent pour commencer à générer et publier des posts
+            Crée un premier agent pour commencer à générer et publier des publications
             LinkedIn.
           </p>
         </div>

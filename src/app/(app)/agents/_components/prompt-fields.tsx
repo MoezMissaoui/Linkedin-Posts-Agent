@@ -108,7 +108,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
             <Field
               id="prompt_audience"
               label="Audience cible"
-              hint="À qui s'adressent les posts ?"
+              hint="À qui s'adressent les publications ?"
               required
             >
               <Input
@@ -146,7 +146,7 @@ export function PromptFields({ initial }: { initial?: Initial }) {
             <Field
               id="prompt_hook_emoji"
               label="Emoji du hook"
-              hint="Le 1er caractère du post."
+              hint="Le 1er caractère de la publication."
               required
             >
               <Input

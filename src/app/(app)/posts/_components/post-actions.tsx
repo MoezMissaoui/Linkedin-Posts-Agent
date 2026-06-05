@@ -21,7 +21,7 @@ export function PostActions({ postLink, onDelete }: Props) {
     startTransition(async () => {
       try {
         await onDelete();
-        toast.success("Post supprimé.");
+        toast.success("Publication supprimée.");
         router.push("/posts");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Erreur inattendue.");
@@ -34,7 +34,7 @@ export function PostActions({ postLink, onDelete }: Props) {
     return (
       <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-sm text-destructive animate-slide-in-right">
         <AlertTriangle className="size-4 shrink-0" />
-        <span>Supprimer ce post définitivement ?</span>
+        <span>Supprimer cette publication définitivement ?</span>
         <Button
           type="button"
           variant="ghost"

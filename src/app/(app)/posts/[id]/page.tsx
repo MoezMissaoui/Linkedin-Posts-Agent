@@ -170,7 +170,7 @@ export default async function PostDetailPage({
         {/* Texte */}
         <Card className="lg:col-span-3 lg:order-1">
           <CardHeader>
-            <CardTitle>Contenu du post</CardTitle>
+            <CardTitle>Contenu de la publication</CardTitle>
             <CardDescription>Texte tel qu&apos;il est publié</CardDescription>
           </CardHeader>
           <CardContent>
