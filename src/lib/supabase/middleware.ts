@@ -12,6 +12,15 @@ function isProtectedPath(pathname: string) {
   );
 }
 
+// Behind a reverse proxy, `request.url` reflects the internal bind host
+// (0.0.0.0 / 127.0.0.1). Redirect against the canonical public origin when set.
+function baseUrl(request: NextRequest): string {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "") ||
+    new URL(request.url).origin
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -41,10 +50,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+  const base = baseUrl(request);
 
   // Redirect unauthenticated users away from protected pages.
   if (!user && isProtectedPath(pathname)) {
-    const loginUrl = new URL("/auth/login", request.url);
+    const loginUrl = new URL("/auth/login", base);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -56,13 +66,13 @@ export async function updateSession(request: NextRequest) {
       pathname === "/auth/register" ||
       pathname === "/auth/forgot-password")
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/dashboard", base));
   }
 
   // Root: route logged-in users to dashboard, others to login.
   if (pathname === "/") {
     return NextResponse.redirect(
-      new URL(user ? "/dashboard" : "/auth/login", request.url),
+      new URL(user ? "/dashboard" : "/auth/login", base),
     );
   }
 

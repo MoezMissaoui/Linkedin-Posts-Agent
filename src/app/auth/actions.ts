@@ -15,6 +15,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
 
 async function getOrigin() {
+  // Prefer the explicit canonical site URL so password-reset / confirmation
+  // links never leak an internal bind address (0.0.0.0 / 127.0.0.1) coming
+  // from a reverse-proxied Host header into outgoing emails.
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, "");
+
   const h = await headers();
   return (
     h.get("origin") ??

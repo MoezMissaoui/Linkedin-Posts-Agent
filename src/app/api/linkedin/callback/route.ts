@@ -33,7 +33,10 @@ function buildReturnUrl(
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const origin = url.origin;
+  // Behind a reverse proxy, url.origin is the internal bind host
+  // (0.0.0.0 / 127.0.0.1). Prefer the canonical public origin for redirects.
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "") || url.origin;
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
