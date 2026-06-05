@@ -1,10 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { RECOVERY_COOKIE } from "@/lib/recovery";
 
 export type AuthState = {
   ok: boolean;
@@ -106,6 +107,9 @@ export async function signUp(
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  // Also lift any recovery confinement so the user isn't bounced back to the
+  // reset-password page after signing out.
+  (await cookies()).delete(RECOVERY_COOKIE);
   revalidatePath("/", "layout");
   redirect("/auth/login");
 }
@@ -191,6 +195,8 @@ export async function updatePassword(
     return { ok: false, message: humanizeAuthError(error.message) };
   }
 
+  // Password changed → the session is now a normal one: lift the confinement.
+  (await cookies()).delete(RECOVERY_COOKIE);
   revalidatePath("/", "layout");
   redirect("/dashboard");
 }

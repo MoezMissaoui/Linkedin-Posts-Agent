@@ -1,8 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { RECOVERY_COOKIE } from "@/lib/recovery";
+
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 import type { Database } from "./types";
+
+const RESET_PATH = "/auth/reset-password";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/posts", "/agents"];
 
@@ -51,6 +55,16 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const base = baseUrl(request);
+
+  // Recovery confinement: a session opened via a password-reset link is flagged
+  // with RECOVERY_COOKIE. Until the password is actually changed (which clears
+  // the cookie), such a session may ONLY reach the reset-password page — every
+  // other path bounces back there. This prevents a clicked-but-abandoned reset
+  // link from granting full app access.
+  const inRecovery = request.cookies.get(RECOVERY_COOKIE)?.value === "1";
+  if (user && inRecovery && pathname !== RESET_PATH) {
+    return NextResponse.redirect(new URL(RESET_PATH, base));
+  }
 
   // Redirect unauthenticated users away from protected pages.
   if (!user && isProtectedPath(pathname)) {

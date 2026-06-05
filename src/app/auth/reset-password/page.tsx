@@ -10,12 +10,13 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updatePassword, type AuthState } from "../actions";
+import { signOut, updatePassword, type AuthState } from "../actions";
 
 const initial: AuthState = { ok: false };
 
@@ -92,6 +93,19 @@ export default function ResetPasswordPage() {
           <SubmitButton>Mettre à jour</SubmitButton>
         </CardContent>
       </form>
+
+      {/* Escape hatch: a recovery session is confined to this page, so offer a
+          way out for users who clicked the link but don't want to reset. */}
+      <CardFooter className="justify-center">
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Annuler et se déconnecter
+          </button>
+        </form>
+      </CardFooter>
     </Card>
   );
 }
