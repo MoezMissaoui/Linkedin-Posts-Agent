@@ -93,20 +93,13 @@ export function AgentCardActions({
                     </p>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => setOpen(false)}
-                  >
-                    Annuler
-                  </Button>
+                <div className="mt-6 flex items-center justify-between gap-2">
                   <Button
                     type="button"
                     disabled={pending}
+                    variant="outline"
                     onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10"
                   >
                     {pending ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -114,6 +107,14 @@ export function AgentCardActions({
                       <Trash2 className="size-4" />
                     )}
                     Supprimer
+                  </Button>
+                  <Button
+                    type="button"
+                    autoFocus
+                    disabled={pending}
+                    onClick={() => setOpen(false)}
+                  >
+                    Annuler
                   </Button>
                 </div>
               </div>
