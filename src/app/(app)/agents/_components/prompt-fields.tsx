@@ -298,7 +298,6 @@ function ModeSwitcher({
         label="Assistant"
         sub="Recommandé"
       />
-      {/* Mode "Avancé" temporairement désactivé — uncomment to re-enable.
       <ModeButton
         active={mode === "advanced"}
         onClick={() => onChange("advanced")}
@@ -306,7 +305,6 @@ function ModeSwitcher({
         label="Avancé"
         sub="Édition libre"
       />
-      */}
     </div>
   );
 }

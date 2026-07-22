@@ -1,3 +1,7 @@
+networks:
+  infra-network:
+    external: true
+
 services:
   app:
     build:
@@ -5,8 +9,6 @@ services:
       dockerfile: Dockerfile
       target: runner
     container_name: postilys
-    ports:
-      - "127.0.0.1:2026:2026"
     env_file:
       - .env
     environment:
@@ -14,3 +16,12 @@ services:
       - PORT=2026
       - HOSTNAME=0.0.0.0
     restart: unless-stopped
+    networks:
+      - infra-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=infra-network
+      - traefik.http.routers.postilys.rule=Host(`postilys.moezmissaoui.com`)
+      - traefik.http.routers.postilys.entrypoints=websecure
+      - traefik.http.routers.postilys.tls.certresolver=myresolver
+      - traefik.http.services.postilys.loadbalancer.server.port=2026
